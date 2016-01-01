@@ -38,7 +38,7 @@ function renderTree() {
      
   // Append the actual word
   nodeGroups.append("text")
-    .text(function(d) { return d.text; })
+    .text(function(d) { return d.attrib.word; })
     .attr("text-anchor", function(d) { 
       return d.children && d.children.length > 0 ? "start" : "middle"; })
     .attr("dx", function(d) { 
