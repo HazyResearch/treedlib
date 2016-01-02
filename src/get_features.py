@@ -13,7 +13,7 @@ from itertools import chain
 # path between
 
 
-# BaseFeature objects specify *structure*
+# FeatureTemplate objects specify *structure*
 # as for attributes...
 
 # * Should support flat & structured sentences
@@ -21,7 +21,7 @@ from itertools import chain
 
 # Starting with: https://docs.python.org/2/library/xml.etree.elementtree.html
 
-class BaseFeature:
+class FeatureTemplate:
   """
   Base feature template class, which must have:
   * A structural specifier, in XPath, specifying *where* in the input tree to look
@@ -32,11 +32,31 @@ class BaseFeature:
     self.xpath = '//node'
     self.subsets = None
 
+  def apply(self, root):
+    """
+    Simple un-optimized function which takes in a FeatureTemplate object and an xml object
+    and returns a feature set
+    """
+    # Optionally take subsets of the node set (e.g. n-grams) 
+    res = root.xpath(self.xpath)
+    res_sets = [res] if self.subsets is None else subsets(res, self.subsets)
+
+    # Generate the features
+    for res_set in res_sets:
+      yield '%s[%s]' % (self.label, '_'.join(res_set))
+
   def __repr__(self):
     return "<%s, XPath='%s', attrib=%s, subsets=%s>" % (self.label, self.xpath, self.attrib, self.subsets)
 
 
-class Unary(BaseFeature):
+def subsets(x, L):
+  """
+  Return all subsets of length 1, 2, ..., min(l, len(x)) from x
+  """
+  return chain.from_iterable([x[s:s+l+1] for s in range(len(x)-l)] for l in range(min(len(x),L)))
+
+
+class Unary(FeatureTemplate):
   """
   The feature comprising the set of nodes making up the mention
   """
@@ -46,7 +66,7 @@ class Unary(BaseFeature):
     self.subsets = 100  # Take n-grams for *all* n...
 
 
-class Get(BaseFeature):
+class Get(FeatureTemplate):
   """
   Returns the map of a specific node attribute onto the resulting node set
   """
@@ -56,7 +76,7 @@ class Get(BaseFeature):
     self.subsets = f.subsets
 
 
-class Left(BaseFeature):
+class Left(FeatureTemplate):
   """
   The feature comprising the set of nodes to the left of the input feature's nodes
   Inherits the input feature's attribs if not specified otherwise
@@ -67,7 +87,7 @@ class Left(BaseFeature):
     self.subsets = 3
 
 
-class Right(BaseFeature):
+class Right(FeatureTemplate):
   """
   The feature comprising the set of nodes to the right of the input feature's nodes
   Inherits the input feature's attribs if not specified otherwise
@@ -78,22 +98,30 @@ class Right(BaseFeature):
     self.subsets = 3
 
 
-def gen_feats(f, root):
+class Between(FeatureTemplate):
   """
-  Simple un-optimized function which takes in a BaseFeature object and an xml object
-  and returns a feature set
+  The set of nodes *between* two node sets
   """
-  # Optionally take subsets of the node set (e.g. n-grams) 
-  res = root.xpath(f.xpath)
-  res_sets = [res] if f.subsets is None else subsets(res, f.subsets)
+  def __init__(self, f1, f2):
+    self.label = 'BETWEEN-%s-%s' % (f1.label, f2.label)
+    self.xpath1 = f1.xpath
+    self.xpath2 = f2.xpath
+    self.subsets = None
 
-  # Generate the features
-  for res_set in res_sets:
-    yield '%s[%s]' % (f.label, '_'.join(res_set))
-
-
-def subsets(x, L):
-  """
-  Return all subsets of length 1, 2, ..., min(l, len(x)) from x
-  """
-  return chain.from_iterable([x[s:s+l+1] for s in range(len(x)-l)] for l in range(min(len(x),L)))
+  def apply(self, root):
+    """
+    Get the path between the two node sets by getting the lowest shared parent,
+    then concatenating the two ancestor paths at this shared parent
+    """
+    p1 = root.xpath(self.xpath1)
+    p2 = root.xpath(self.xpath2)
+    shared = set(p1).intersection(p2)
+    b1 = []
+    b2 = []
+    for node in reversed(p1):
+      b1.append(node)
+      if node in shared: break
+    for node in reversed(p2):
+      if node in shared: break
+      b2.append(node)
+    return b1 + b2[::-1]
