@@ -1,25 +1,5 @@
 from itertools import chain
-# //node[@cand=true]
 
-# get attribute of single node...
-# POS tag of
-# NER tag of
-# lemma of
-
-# siblings
-# parent
-# etc...
-
-# path between
-
-
-# FeatureTemplate objects specify *structure*
-# as for attributes...
-
-# * Should support flat & structured sentences
-# Should we emit both by default?  Or consider them totally different inputs...?
-
-# Starting with: https://docs.python.org/2/library/xml.etree.elementtree.html
 
 class FeatureTemplate:
   """
@@ -43,7 +23,10 @@ class FeatureTemplate:
 
     # Generate the features
     for res_set in res_sets:
-      yield '%s[%s]' % (self.label, '_'.join(res_set))
+      yield self._feat_str(res_set)
+
+  def _feat_str(self, res_set):
+    return '%s[%s]' % (self.label, '_'.join(map(str, res_set)))
 
   def __repr__(self):
     return "<%s, XPath='%s', attrib=%s, subsets=%s>" % (self.label, self.xpath, self.attrib, self.subsets)
@@ -56,12 +39,12 @@ def subsets(x, L):
   return chain.from_iterable([x[s:s+l+1] for s in range(len(x)-l)] for l in range(min(len(x),L)))
 
 
-class Unary(FeatureTemplate):
+class Mention(FeatureTemplate):
   """
   The feature comprising the set of nodes making up the mention
   """
   def __init__(self, cid):
-    self.label = 'UNARY'
+    self.label = 'MENTION'
     self.xpath = ".//node[@cid='%s']" % str(cid)
     self.subsets = 100  # Take n-grams for *all* n...
 
@@ -69,11 +52,16 @@ class Unary(FeatureTemplate):
 class Get(FeatureTemplate):
   """
   Returns the map of a specific node attribute onto the resulting node set
+  This is assumed to be the outermost feature template class
+  Given this, Get uses the apply function of the input feature template
   """
   def __init__(self, f, attrib):
-    self.label = '%s-%s' % (attrib.upper(), f.label)
-    self.xpath = f.xpath + '/@' + attrib
-    self.subsets = f.subsets
+    self.f = f
+    self.f.label = '%s-%s' % (attrib.upper(), f.label)
+    self.f.xpath = f.xpath + '/@' + attrib
+
+  def apply(self, root):
+    return self.f.apply(root)
 
 
 class Left(FeatureTemplate):
@@ -104,6 +92,7 @@ class Between(FeatureTemplate):
   """
   def __init__(self, f1, f2):
     self.label = 'BETWEEN-%s-%s' % (f1.label, f2.label)
+    self.xpath = '/ancestor::node'
     self.xpath1 = f1.xpath
     self.xpath2 = f2.xpath
     self.subsets = None
@@ -113,8 +102,8 @@ class Between(FeatureTemplate):
     Get the path between the two node sets by getting the lowest shared parent,
     then concatenating the two ancestor paths at this shared parent
     """
-    p1 = root.xpath(self.xpath1)
-    p2 = root.xpath(self.xpath2)
+    p1 = root.xpath(self.xpath1 + self.xpath)
+    p2 = root.xpath(self.xpath2 + self.xpath)
     shared = set(p1).intersection(p2)
     b1 = []
     b2 = []
@@ -124,4 +113,4 @@ class Between(FeatureTemplate):
     for node in reversed(p2):
       if node in shared: break
       b2.append(node)
-    return b1 + b2[::-1]
+    return [self._feat_str(b1 + b2[::-1])]
