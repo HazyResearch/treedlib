@@ -33,6 +33,9 @@ class BaseFeature:
     self.attrib = []
     self.subsets = None
 
+  def __repr__(self):
+    return "<%s, XPath='%s', attrib=%s, subsets=%s>" % (self.label, self.xpath, self.attrib, self.subsets)
+
 
 class Self(BaseFeature):
   """
@@ -45,10 +48,28 @@ class Self(BaseFeature):
     self.subsets = 100  # Take n-grams for *all* n...
 
 
-#class Siblings(BaseFeature):
-#  """
-#  Gets the siblings of the nodes making up the mentions
-#  """
+class Left(BaseFeature):
+  """
+  The feature comprising the set of nodes to the left of the input feature's nodes
+  Inherits the input feature's attribs if not specified otherwise
+  """
+  def __init__(self, f, attrib=None):
+    self.label = 'LEFT-OF-%s' % f.label
+    self.xpath = f.xpath + '/preceding-sibling::node'
+    self.attrib = attrib if attrib is not None else f.attrib
+    self.subsets = 3
+
+
+class Right(BaseFeature):
+  """
+  The feature comprising the set of nodes to the right of the input feature's nodes
+  Inherits the input feature's attribs if not specified otherwise
+  """
+  def __init__(self, f, attrib=None):
+    self.label = 'RIGHT-OF-%s' % f.label
+    self.xpath = f.xpath + '/following-sibling::node'
+    self.attrib = attrib if attrib is not None else f.attrib
+    self.subsets = 3
 
 
 def gen_feats(f, root):
@@ -57,13 +78,17 @@ def gen_feats(f, root):
   and returns a feature set
   """
   # Optionally take subsets of the node set (e.g. n-grams) 
-  res = root.findall(f.xpath)
-  if f.subsets is None:
-    node_sets = [res]
-  else:
-    node_sets = chain.from_iterable([[res[s:s+l] for s in range(len(res)-l+1)] for l in range(1, min(f.subsets, len(res)))])
+  res = root.xpath(f.xpath)
+  node_sets = [res] if f.subsets is None else subsets(res, f.subsets)
 
   # Generate the features
   for nodes in node_sets:
     for a in f.attrib:
       yield '%s-%s[%s]' % (f.label, a, '_'.join(map(lambda node : node.get(a), nodes)))
+
+
+def subsets(x, L):
+  """
+  Return all subsets of length 1, 2, ..., min(l, len(x)) from x
+  """
+  return chain.from_iterable([x[s:s+l+1] for s in range(len(x)-l)] for l in range(min(len(x),L)))

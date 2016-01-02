@@ -2,7 +2,7 @@ from IPython.core.display import display_html, HTML, display_javascript, Javascr
 import json
 import os
 import re
-import xml.etree.ElementTree as et
+import lxml.etree as et
 
 APP_HOME = os.environ['TREEDLIB_HOME']
 
