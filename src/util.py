@@ -17,6 +17,7 @@ def read_ptsv_element(x):
       pass
   raise ValueError("Type not recognized.")
 
+
 def read_ptsv(line):
   """
   Parse a line in psql-compatible tsv format
@@ -26,8 +27,19 @@ def read_ptsv(line):
 
 SentenceInput = namedtuple('SentenceInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, word_idxs, dep_labels, dep_parents')
 
+
 def load_sentences(f_path):
   """
   Helper fn to load NLP parser output file as SentenceInput objects
   """
   return [SentenceInput._make(read_ptsv(line)) for line in open(f_path, 'rb')] 
+
+
+def tag_candidate(root, words, cid):
+  """
+  Hackey function to tag candidates in xml tree
+  Note for example that this will get messed up if the words comprising the candidate occur
+  elsewhere in the sentence also...
+  """
+  for word in words:
+    root.findall(".//node[@word='%s']" % word)[0].set('cid', cid)
