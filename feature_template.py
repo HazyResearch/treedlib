@@ -44,9 +44,7 @@ def subsets(x, L):
 
 
 class Mention(FeatureTemplate):
-  """
-  The feature comprising the set of nodes making up the mention
-  """
+  """The feature comprising the set of nodes making up the mention"""
   def __init__(self, cid, subsets=None):
     self.label = 'MENTION'
     self.xpaths = set(["//node[@cid='%s']" % str(cid)])
