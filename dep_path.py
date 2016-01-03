@@ -4,8 +4,6 @@ import os
 import re
 import lxml.etree as et
 
-APP_HOME = os.environ['TREEDLIB_HOME']
-
 class DepTree:
   def __init__(self, sentence_input, prune_root=True):
     """
@@ -68,12 +66,12 @@ class DepTree:
     """
 
     # HTML
-    display_html(HTML(data=open('%s/src/vis/tree-chart.html' % APP_HOME).read()))
+    display_html(HTML(data=open('vis/tree-chart.html').read()))
 
     # JS
     JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
     js = "var root = " + json.dumps(self.tree) + "\n"
-    js += open('%s/src/vis/tree-chart.js' % APP_HOME).read()
+    js += open('vis/tree-chart.js').read()
     display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
