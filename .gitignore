@@ -3,9 +3,3 @@
 *.swp
 *.pyc
 env.sh
-
-# data
-*.json.txt
-*.txt
-*.tsv
-*.parsed.tsv
