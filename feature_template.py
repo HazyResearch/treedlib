@@ -1,12 +1,16 @@
 from itertools import chain
 import re
 
+# op_0 : X -> p(T)
+# op_1 : p(T) -> p(T)
+# ind : p(T) -> {0,1}^F
+
 class FeatureTemplate:
   """Base feature template class"""
   def __init__(self):
     self.label = None
     self.xpaths = set(['//node'])
-    self.subsets = None
+    self.subsets = None  # subtrees / p(T)
 
   def apply(self, root):
     """
