@@ -22,9 +22,11 @@ class NodeSet:
 
 class Mention(NodeSet):
   """Gets candidate mention nodes"""
-  def __init__(self, cid):
+  def __init__(self, cid=0):
     self.label = 'MENTION'
-    self.xpath = "//node[@cid='%s']" % str(cid)
+    if type(cid) != int:
+      raise ValueError("Argument must be a (0-index) int corresponding to mention number")
+    self.xpath = "//node[@cid='{%s}']" % str(cid)
 
 
 class Keyword(NodeSet):
@@ -80,13 +82,22 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root):
-    """Specifically handle single attrib or multiple attribs per node here"""
+  def apply(self, root, cids):
+    """
+    Apply the feature template to the xml tree provided, with respect to the respective
+    cids provided
+    """
+    # Sub in the candidate mention identifiers provided
+    xpath = self.ns.xpath.format(*cids)
+
+    # Specifically handle single attrib or multiple attribs per node here
     attribs = re.split(r'\s*,\s*', self.attribs)
     if len(attribs) > 1:
-      res = ['|'.join(str(node.get(a)) for a in attribs) for node in root.xpath(self.ns.xpath)]
+      res = ['|'.join(str(node.get(a)) for a in attribs) for node in root.xpath(xpath)]
     else:
-      res = map(str, root.xpath(self.ns.xpath + '/@' + attribs[0]))
+      res = map(str, root.xpath(xpath + '/@' + attribs[0]))
+
+    # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
       for feat in self._get_features(res):
         yield '%s:%s[%s]' % ('|'.join(attribs).upper(), self.ns.label, feat)
@@ -98,8 +109,8 @@ class Indicator:
     """
     return ['_'.join(res)]
 
-  def print_apply(self, root):
-    for feat in self.apply(root):
+  def print_apply(self, root, cids):
+    for feat in self.apply(root, cids):
       print feat
   
   def __repr__(self):
@@ -166,18 +177,18 @@ class Combinator:
     self.ind1 = ind1
     self.ind2 = ind2
 
-  def apply(self, root):
-    return self.ind1.apply(root)
+  def apply(self, root, cids):
+    return self.ind1.apply(root, cids)
 
-  def print_apply(self, root):
-    return self.apply(root)
+  def print_apply(self, root, cids):
+    return self.apply(root, cids)
   
 
 class Combinations(Combinator):
   """Generates all *pairs* of features"""
-  def apply(self, root):
-    for f1 in self.ind1.apply(root):
-      for f2 in self.ind2.apply(root):
+  def apply(self, root, cids):
+    for f1 in self.ind1.apply(root, cids):
+      for f2 in self.ind2.apply(root, cids):
         yield '%s+%s' % (f1, f2)
    
 
