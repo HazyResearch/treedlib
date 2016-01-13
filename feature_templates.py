@@ -14,7 +14,7 @@ class NodeSet:
   """
   def __init__(self):
     self.label = 'NODE_SET'
-    self.xpath = '//node'
+    self.xpath = '//*'
 
   def __repr__(self):
     return '<%s, xpath="%s">' % (self.label, self.xpath)
@@ -26,14 +26,14 @@ class Mention(NodeSet):
     self.label = 'MENTION'
     if type(cid) != int:
       raise ValueError("Argument must be a (0-index) int corresponding to mention number")
-    self.xpath = "//node[@cid='{%s}']" % str(cid)
+    self.xpath = "//*[@cid='{%s}']" % str(cid)
 
 
 class Keyword(NodeSet):
   """Gets keyword nodes"""
   def __init__(self, keyword, ns=None):
     self.label = 'KEYWORD-IN-%s' % ns.label if ns else 'KEYWORD'
-    self.xpath = ns.xpath if ns else '//node'
+    self.xpath = ns.xpath if ns else '//*'
     self.xpath += "[@word='%s']" % keyword
 
 
@@ -41,21 +41,21 @@ class LeftSiblings(NodeSet):
   """Gets preceding siblings"""
   def __init__(self, ns, w=3):
     self.label = 'LEFT-OF-%s' % ns.label
-    self.xpath = '%s/preceding-sibling::node[position() <= %s]' % (ns.xpath, w)
+    self.xpath = '%s/preceding-sibling::*[position() <= %s]' % (ns.xpath, w)
 
 
 class RightSiblings(NodeSet):
   """Gets following siblings"""
   def __init__(self, ns, w=3):
     self.label = 'RIGHT-OF-%s' % ns.label
-    self.xpath = '%s/following-sibling::node[position() <= %s]' % (ns.xpath, w)
+    self.xpath = '%s/following-sibling::*[position() <= %s]' % (ns.xpath, w)
 
 
 class Parents(NodeSet):
   """Gets parents of the node set"""
   def __init__(self, ns):
     self.label = 'PARENTS-OF-%s' % ns.label
-    self.xpath = ns.xpath + '/ancestor::node'
+    self.xpath = ns.xpath + '/ancestor::*'
 
 
 class Between(NodeSet):
@@ -65,7 +65,7 @@ class Between(NodeSet):
   """
   def __init__(self, ns1, ns2):
     self.label = 'BETWEEN-%s-and-%s' % (ns1.label, ns2.label)
-    self.xpath = "{0}/ancestor-or-self::node[count(. | {1}/ancestor-or-self::node) = count({1}/ancestor-or-self::node)][1]/descendant-or-self::node[ .{0} | .{1}]".format(ns1.xpath, ns2.xpath)
+    self.xpath = "{0}/ancestor-or-self::*[count(. | {1}/ancestor-or-self::*) = count({1}/ancestor-or-self::*)][1]/descendant-or-self::*[ .{0} | .{1}]".format(ns1.xpath, ns2.xpath)
 
 
 # INDICATOR:
