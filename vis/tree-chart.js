@@ -1,7 +1,8 @@
 // See http://bl.ocks.org/d3noob/8375092
+// Two vars need to be provided via python string formatting: the tree, and the canvas id
 
-// Tree variable is prepended to this file in python...
-// root = ...
+// JSON tree
+var root = %s;
 
 // Constants
 var margin = {top: 20, right: 20, bottom: 20, left: 20},
@@ -14,7 +15,7 @@ var tree = d3.layout.tree()
   .size([width, height]);
 
 // Create the svg canvas
-var svg = d3.select("#tree-chart")
+var svg = d3.select("#tree-chart-%s")
   .append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)

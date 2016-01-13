@@ -4,14 +4,29 @@ import os
 import re
 import lxml.etree as et
 
-class Tree:
-  def __init__(self, raw):
-    """Calls subroutines to parse input"""
-    self.raw = raw
-    self.js = self._make_js()
-    self.root = self._make_xml()
+class XMLTree:
+  """
+  A generic tree representation which takes XML as input
+  Includes subroutines for conversion to JSON & for visualization based on js form
+  """
+  def __init__(self, xml_root):
+    """Calls subroutines to generate JSON form of XML input"""
+    self.root = xml_root
+    self.json = self._to_json(self.root)
 
-  def to_xml_str(self):
+    # create a unique id for e.g. canvas id in notebook
+    self.id = str(abs(hash(self.to_str())))
+
+  def _to_json(self, root):
+    js = {
+      'attrib': dict(root.attrib),
+      'children': []
+    }
+    for i,c in enumerate(root):
+      js['children'].append(self._to_json(c))
+    return js
+
+  def to_str(self):
     return et.tostring(self.root)
 
   def render_tree(self):
@@ -19,92 +34,69 @@ class Tree:
     Renders d3 visualization of the d3 tree, for IPython notebook display
     Depends on html/js files in vis/ directory, which is assumed to be in same dir...
     """
+    # TODO: Make better control over what format / what attributes displayed @ nodes!
     # HTML
-    display_html(HTML(data=open('vis/tree-chart.html').read()))
+    html = open('vis/tree-chart.html').read() % self.id
+    display_html(HTML(data=html))
 
     # JS
     JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
-    js = "var root = " + json.dumps(self.js) + "\n"
-    js += open('vis/tree-chart.js').read()
+    js = open('vis/tree-chart.js').read() % (json.dumps(self.json), self.id)
     display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
-class DepTree(Tree):
-  """
-  Initializes via a SentenceInput object, which is the output of the CoreNLP preprocessing
-  pipeline.  Crucially, a SentenceInput object should contain the words of the sentence,
-  and the dependency parse in CoNLL format (two arrays, dep_parents and dep_labels)
-  """
+def sentence_to_xmltree(sentence_input, prune_root=True):
+  """Transforms a util.SentenceInput object into an XMLTree"""
+  root = sentence_to_xmltree_sub(sentence_input, 0)
 
-  def _make_attrib(self, i):
-    """
-    Generate a dictionary of node attributes from a SentenceInput object's attribute arrays
-    """
-    if i < 0: 
-      return {}
-    return dict([(singular(k), v[i]) for k,v in filter(lambda x : type(x[1]) == list, self.raw._asdict().iteritems()) if v[i] is not None])
+  # Often the return tree will have several roots, where one is the actual root
+  # And the rest are just singletons not included in the dep tree parse...
+  # We optionally remove these singletons and then collapse the root if only one child left
+  if prune_root:
+    for c in root:
+      if len(c) == 0:
+        root.remove(c)
+    if len(root) == 1:
+      root = root.findall("./*")[0]
+  return XMLTree(root)
 
-  def _make_js(self, root=0, prune_root=True):
-    node = {
-      'id' : root,
-      'attrib' : self._make_attrib(root-1),
-      'children' : []
-    }
-    for i,d in enumerate(self.raw.dep_parents):
-      if d == root:
-        node['children'].append(self._make_js(i+1))
-
-    # If prune_root = True, remove leaf node children of the root node
-    # In general these seem to be unimportant words (root parent is parser default?)
-    # Also collapse root node if applicable after pruning
-    if root == 0 and prune_root:
-      node['children'] = filter(lambda c : len(c['children']) > 0, node['children'])
-      if len(node['children']) == 1:
-        node = node['children'][0]
-    return node
-
-  def _make_xml(self, node=None):
-    """
-    Convert to XML representation, starting from js
-    """
-    node = self.js if node is None else node
-
-    # attribs need to be str format for serialization
-    attrib = list(node['attrib'].iteritems()) + [('id', node['id'])]
-    root = et.Element('node', attrib=dict(map(lambda x : (x[0], str(x[1])), attrib)))
-
-    # Recursively append children
-    for c in node['children']:
-      root.append(self._make_xml(c))
-    return root
-
+def sentence_to_xmltree_sub(s, rid=0):
+  """Recursive subroutine to construct XML tree from util.SentenceInput object"""
+  i = rid - 1
+  attrib = {}
+  if i >= 0:
+    for k,v in filter(lambda x : type(x[1]) == list, s._asdict().iteritems()):
+      if v[i] is not None:
+        attrib[singular(k)] = str(v[i])
+  root = et.Element('node', attrib=attrib)
+  for i,d in enumerate(s.dep_parents):
+    if d == rid:
+      root.append(sentence_to_xmltree_sub(s, i+1))
+  return root
 
 def singular(s):
   """Get singular form of word s (crudely)"""
   return re.sub(r'e?s$', '', s, flags=re.I)
 
 
-class TableTree(Tree):
-  """Initializes via HTML table as text string input"""
+def html_table_to_xmltree(html):
+  """HTML/XML table to XMLTree object"""
+  node = et.fromstring(re.sub(r'>\s+<', '><', html.strip()))
+  xml = html_table_to_xmltree_sub(node)
+  return XMLTree(xml)
 
-  def _make_xml(self, node=None):
-    """
-    Take the XML and convert each word in leaf nodes into its own node
-    Note: Ideally this text would be run through CoreNLP?
-    """
-    node = et.fromstring(re.sub(r'>\s+<', '><', self.raw.strip())) if node is None else node
-
-    # Split text into Token nodes
-    # NOTE: very basic token splitting here... (to run through CoreNLP?)
-    if node.text is not None:
-      print node.text
-      for tok in re.split(r'\s+', node.text):
-        node.append(et.Element('token', attrib={'word':tok}))
-    
-    # Recursively append children
-    for c in node:
-      node.append(self._make_xml(c))
-    return node
-
-  def _make_js(self, node=None):
-    return None
+def html_table_to_xmltree_sub(node):
+  """
+  Take the XML/HTML table and convert each word in leaf nodes into its own node
+  Note: Ideally this text would be run through CoreNLP?
+  """
+  # Split text into Token nodes
+  # NOTE: very basic token splitting here... (to run through CoreNLP?)
+  if node.text is not None:
+    for tok in re.split(r'\s+', node.text):
+      node.append(et.Element('token', attrib={'word':tok}))
+  
+  # Recursively append children
+  for c in node:
+    node.append(html_table_to_xmltree_sub(c))
+  return node
