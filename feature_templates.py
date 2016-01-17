@@ -46,21 +46,21 @@ class LeftSiblings(NodeSet):
   """Gets preceding siblings"""
   def __init__(self, ns, w=3):
     self.label = 'LEFT-OF-%s' % ns.label
-    self.xpath = '%s/preceding-sibling::*[position() <= %s]' % (ns.xpath, w)
+    self.xpath = '%s[1]/preceding-sibling::*[position() <= %s]' % (ns.xpath, w)
 
 
 class RightSiblings(NodeSet):
   """Gets following siblings"""
   def __init__(self, ns, w=3):
     self.label = 'RIGHT-OF-%s' % ns.label
-    self.xpath = '%s/following-sibling::*[position() <= %s]' % (ns.xpath, w)
+    self.xpath = '%s[1]/following-sibling::*[position() <= %s]' % (ns.xpath, w)
 
 
 class Parents(NodeSet):
   """Gets parents of the node set"""
   def __init__(self, ns):
     self.label = 'PARENTS-OF-%s' % ns.label
-    self.xpath = ns.xpath + '/ancestor::*'
+    self.xpath = ns.xpath + '[1]/ancestor::*'
 
 
 class Between(NodeSet):
@@ -68,10 +68,9 @@ class Between(NodeSet):
   Gets the nodes between two node sets
   Note: this requires some ugly xpath... could change this to non-xpath method
   """
-  # TODO: Includes nodes of multi-level nodesets... fix this!
   def __init__(self, ns1, ns2):
     self.label = 'BETWEEN-%s-and-%s' % (ns1.label, ns2.label)
-    self.xpath = "{0}/ancestor-or-self::*[count(. | {1}/ancestor-or-self::*) = count({1}/ancestor-or-self::*)][1]/descendant-or-self::*[ .{0} | .{1}]".format(ns1.xpath, ns2.xpath)
+    self.xpath = "{0}[1]/ancestor-or-self::*[count(. | {1}[1]/ancestor-or-self::*) = count({1}[1]/ancestor-or-self::*)][1]/descendant-or-self::*[(count(.{0}) = count({0})) or (count(.{1}) = count({1}))]".format(ns1.xpath, ns2.xpath)
 
 
 class Filter(NodeSet):
@@ -99,7 +98,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib):
+  def apply(self, root, cids, cid_attrib='word_idx'):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
@@ -130,7 +129,7 @@ class Indicator:
     """
     return ['_'.join(res)]
 
-  def print_apply(self, root, cids, cid_attrib):
+  def print_apply(self, root, cids, cid_attrib='word_idx'):
     for feat in self.apply(root, cids, cid_attrib):
       print feat
   
