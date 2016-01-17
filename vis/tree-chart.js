@@ -35,6 +35,8 @@ function renderTree() {
        
   // Append circles
   nodeGroups.append("circle")
+    .on("click", function() {
+      d3.select(this).classed("highlight", !d3.select(this).classed("highlight")); })
     .attr("r", R);
      
   // Append the actual word
@@ -52,6 +54,8 @@ function renderTree() {
     .data(edges)
     .enter().append("path")
     .attr("class", "edge")
+    .on("click", function() {
+      d3.select(this).classed("highlight", !d3.select(this).classed("highlight")); })
     .attr("d", d3.svg.diagonal());
 }
 

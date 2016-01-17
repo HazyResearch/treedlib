@@ -1,6 +1,39 @@
 from feature_templates import *
 
 BASIC_ATTRIBS = ['word', 'lemma', 'pos', 'ner']
+BASIC_ATTRIBS_REL = ['word', 'lemma', 'pos', 'ner', 'dep_label']
+
+def get_relation_features(root, e1_idxs, e2_idxs, keywords=[]):
+  """
+  Get relation features given an XMLTree root and the word indexes of the two entities
+  """
+  temps = []
+
+  btwn = Between(Mention(0), Mention(1))
+
+  # The full path between
+  for a in BASIC_ATTRIBS_REL:
+    temps.append(Indicator(btwn, a))
+
+  # The tri-grams between
+  for a in BASIC_ATTRIBS_REL:
+    temps.append(Ngrams(btwn, a, 3))
+
+  # The VBs between
+  temps.append(Ngrams(Filter(btwn, 'pos', 'VB'), 'lemma', [1,3]))
+
+  # The window features for each of the mentions
+  for m in [0,1]:
+    for a in BASIC_ATTRIBS:
+      r = RightNgrams(RightSiblings(Mention(m)), a)
+      l = LeftNgrams(LeftSiblings(Mention(m)), a)
+      temps += [r, l, Combinations(r, l)]
+
+  # Apply the templates
+  for temp in temps:
+    for feat in temp.apply(root, [e1_idxs, e2_idxs], 'word_idx'):
+      yield feat
+
 
 def get_generic_mention_features(root, cid, keywords):
   """

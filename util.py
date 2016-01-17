@@ -25,14 +25,16 @@ def read_ptsv(line):
   """
   return map(read_ptsv_element, line.rstrip().split('\t'))
 
-SentenceInput = namedtuple('SentenceInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, word_idxs, dep_labels, dep_parents')
+SentenceInput = namedtuple('SentenceInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
 
 
 def load_sentences(f_path):
   """
   Helper fn to load NLP parser output file as SentenceInput objects
   """
-  return [SentenceInput._make(read_ptsv(line)) for line in open(f_path, 'rb')] 
+  for line in open(f_path, 'rb'):
+    l = read_ptsv(line)
+    yield SentenceInput._make(l + [range(len(l[3]))])
 
 
 def tag_candidate(root, words, cid):

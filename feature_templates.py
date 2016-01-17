@@ -1,6 +1,13 @@
 from itertools import chain
 import re
 
+
+# FEATURES TO MAKE:
+# * Filter by tag (e.g. lemmas on dep path between filtered by POS tag)
+#   * Other non-consecutive subsets in general?
+# * Number of other mentions on path
+
+
 # NODESET:
 # ===========
 
@@ -24,9 +31,7 @@ class Mention(NodeSet):
   """Gets candidate mention nodes"""
   def __init__(self, cid=0):
     self.label = 'MENTION'
-    if type(cid) != int:
-      raise ValueError("Argument must be a (0-index) int corresponding to mention number")
-    self.xpath = "//*[@cid='{%s}']" % str(cid)
+    self.xpath = "//*[{%s}]" % str(cid)
 
 
 class Keyword(NodeSet):
@@ -63,9 +68,21 @@ class Between(NodeSet):
   Gets the nodes between two node sets
   Note: this requires some ugly xpath... could change this to non-xpath method
   """
+  # TODO: Includes nodes of multi-level nodesets... fix this!
   def __init__(self, ns1, ns2):
     self.label = 'BETWEEN-%s-and-%s' % (ns1.label, ns2.label)
     self.xpath = "{0}/ancestor-or-self::*[count(. | {1}/ancestor-or-self::*) = count({1}/ancestor-or-self::*)][1]/descendant-or-self::*[ .{0} | .{1}]".format(ns1.xpath, ns2.xpath)
+
+
+class Filter(NodeSet):
+  """
+  Gets a subset of the nodes filtered by some node attribute
+  Note the option to do exact match or starts with (could be expanded; useful for POS now...)
+  """
+  def __init__(self, ns, filter_attr, filter_by, starts_with=True):
+    self.label = 'FILTER-BY(%s=%s):%s' % (filter_attr, filter_by, ns.label)
+    temp = "[starts-with(@%s, '%s')]" if starts_with else "[@%s='%s']"
+    self.xpath = ns.xpath + temp % (filter_attr, filter_by)
 
 
 # INDICATOR:
@@ -82,13 +99,17 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids):
+  def apply(self, root, cids, cid_attrib):
     """
-    Apply the feature template to the xml tree provided, with respect to the respective
-    cids provided
+    Apply the feature template to the xml tree provided
+    A list of lists of candidate mention ids are passed in, as well as a cid_attrib
+    These identify the candidate mentions refered to by index in Mention
+    For example, cids=[[1,2]], cid_attrib='word_idx' will have mention 0 as the set of nodes
+    that have word inde 1 and 2
     """
     # Sub in the candidate mention identifiers provided
-    xpath = self.ns.xpath.format(*cids)
+    m = [" or ".join("@%s='%s'" % (cid_attrib, c) for c in cid) for cid in cids] 
+    xpath = self.ns.xpath.format(*m)
 
     # Specifically handle single attrib or multiple attribs per node here
     attribs = re.split(r'\s*,\s*', self.attribs)
@@ -109,16 +130,20 @@ class Indicator:
     """
     return ['_'.join(res)]
 
-  def print_apply(self, root, cids):
-    for feat in self.apply(root, cids):
+  def print_apply(self, root, cids, cid_attrib):
+    for feat in self.apply(root, cids, cid_attrib):
       print feat
   
   def __repr__(self):
     return '<%s:%s:%s, xpath="%s">' % (self.__class__.__name__, self.attribs, self.ns.label, self.ns.xpath)
 
 
-class NGrams(Indicator):
-  """Return indicator features over the ngrams of a result set"""
+class Ngrams(Indicator):
+  """
+  Return indicator features over the ngrams of a result set
+  If ng arg is an int, will get ngrams of *exactly* this length
+  If ng arg is a list/tuple, will get all ngrams of this range, *inclusive*
+  """
   def __init__(self, ns, attribs, ng):
     self.ns = ns
     self.attribs = attribs
@@ -129,7 +154,7 @@ class NGrams(Indicator):
 
   def _get_features(self, res):
     if type(self.ng) == int:
-      r = range(min(len(res), self.ng))
+      r = [self.ng - 1]
     else:
       r = range(self.ng[0] - 1, min(len(res), self.ng[1]))
     return chain.from_iterable(['_'.join(res[s:s+l+1]) for s in range(len(res)-l)] for l in r)
@@ -177,18 +202,18 @@ class Combinator:
     self.ind1 = ind1
     self.ind2 = ind2
 
-  def apply(self, root, cids):
-    return self.ind1.apply(root, cids)
+  def apply(self, root, cids, cid_attrib):
+    return self.ind1.apply(root, cids, cid_attrib)
 
-  def print_apply(self, root, cids):
-    return self.apply(root, cids)
+  def print_apply(self, root, cids, cid_attrib):
+    return self.apply(root, cids, cid_attrib)
   
 
 class Combinations(Combinator):
   """Generates all *pairs* of features"""
-  def apply(self, root, cids):
-    for f1 in self.ind1.apply(root, cids):
-      for f2 in self.ind2.apply(root, cids):
+  def apply(self, root, cids, cid_attrib):
+    for f1 in self.ind1.apply(root, cids, cid_attrib):
+      for f2 in self.ind2.apply(root, cids, cid_attrib):
         yield '%s+%s' % (f1, f2)
    
 
