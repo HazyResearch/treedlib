@@ -1,3 +1,4 @@
+from IPython.core.display import display_html, HTML, display_javascript, Javascript
 import json
 import os
 import re
@@ -11,9 +12,37 @@ class XMLTree:
   def __init__(self, xml_root):
     """Calls subroutines to generate JSON form of XML input"""
     self.root = xml_root
+    self.json = self._to_json(self.root)
+
+    # create a unique id for e.g. canvas id in notebook
+    self.id = str(abs(hash(self.to_str())))
+
+  def _to_json(self, root):
+    js = {
+      'attrib': dict(root.attrib),
+      'children': []
+    }
+    for i,c in enumerate(root):
+      js['children'].append(self._to_json(c))
+    return js
 
   def to_str(self):
     return et.tostring(self.root)
+
+  def render_tree(self):
+    """
+    Renders d3 visualization of the d3 tree, for IPython notebook display
+    Depends on html/js files in vis/ directory, which is assumed to be in same dir...
+    """
+    # TODO: Make better control over what format / what attributes displayed @ nodes!
+    # HTML
+    html = open('vis/tree-chart.html').read() % self.id
+    display_html(HTML(data=html))
+
+    # JS
+    JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
+    js = open('vis/tree-chart.js').read() % (json.dumps(self.json), self.id)
+    display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
 def sentence_to_xmltree(sentence_input, prune_root=True):
