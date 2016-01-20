@@ -1,15 +1,17 @@
 from collections import namedtuple
 import re
 
-def read_ptsv_element(x):
+def read_ptsv_element(x, splitter='|^|'):
   """
   Parse an element in psql-compatible tsv format, i.e. {-format arrays
   Takes a string as input, handles float, int, str vals, and arrays of these types
   """
   if len(x) == 0:
     return None
-  if x[0] == '{':
+  elif x[0] == '{':
     return map(read_ptsv_element, re.split(r'\"?,\"?', re.sub(r'^\{\"?|\"?\}$', '', x)))
+  elif '|^|' in x:
+    return map(read_ptsv_element, x.split('|^|'))
   for type_fn in [int, float, str]:
     try:
       return type_fn(x)
@@ -25,8 +27,9 @@ def read_ptsv(line):
   """
   return map(read_ptsv_element, line.rstrip().split('\t'))
 
-SentenceInput = namedtuple('SentenceInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
+SentenceInput = namedtuple('SentenceInput', 'words, lemmas, poses, ners, dep_labels, dep_parents, word_idxs')
 
+RelationInput = namedtuple('RelationInput', 'relation_id, doc_id, section_id, sent_id, gene_mention_id, gene_wordidxs, pheno_mention_id, pheno_wordidxs, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
 
 def load_sentences(f_path):
   """
