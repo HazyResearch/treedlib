@@ -1,5 +1,6 @@
 from collections import namedtuple
 import re
+from tree_structs import sentence_to_xmltree
 
 def read_ptsv_element(x, splitter='|^|'):
   """
@@ -27,12 +28,33 @@ def read_ptsv(line):
   """
   return map(read_ptsv_element, line.rstrip().split('\t'))
 
+
+# FOR DEEPDIVE:
+
+# Note that we also add word_idxs beyond the currnt dd format...
+SentenceInput = namedtuple('SentenceInput', 'doc_id, section_id, sent_id, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
+
+XMLInput = namedtuple('XMLInput', 'doc_id, section_id, sent_id, xml')
+
+def sentence_input_to_xml_input(line):
+  """
+  Input: A row from the standard CoreNLP-preprocessed, sentences_input table of a deepdive app
+  Ouput: An xmltree_input row
+  """
+  attribs = read_ptsv(line)
+  si = SentenceInput._make(attribs + [range(len(attribs[3]))])
+  return XMLInput(si.doc_id, si.section_id, si.sent_id, sentence_to_xmltree(si).to_str())
+
+
+
+
+
+
 #SentenceInput = namedtuple('SentenceInput', 'words, lemmas, poses, ners, dep_labels, dep_parents, word_idxs')
 
-RelationInput = namedtuple('RelationInput', 'relation_id, doc_id, section_id, sent_id, gene_mention_id, gene_wordidxs, pheno_mention_id, pheno_wordidxs, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
+#RelationInput = namedtuple('RelationInput', 'relation_id, doc_id, section_id, sent_id, gene_mention_id, gene_wordidxs, pheno_mention_id, pheno_wordidxs, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
 
-
-CoreNLPInput = namedtuple('CoreNLPInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
+#CoreNLPInput = namedtuple('CoreNLPInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
 
 def load_corenlp_sentences(f_path):
   """Helper fn to load NLP parser output file as CoreNLPInput objects"""
