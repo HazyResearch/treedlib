@@ -27,17 +27,18 @@ def read_ptsv(line):
   """
   return map(read_ptsv_element, line.rstrip().split('\t'))
 
-SentenceInput = namedtuple('SentenceInput', 'words, lemmas, poses, ners, dep_labels, dep_parents, word_idxs')
+#SentenceInput = namedtuple('SentenceInput', 'words, lemmas, poses, ners, dep_labels, dep_parents, word_idxs')
 
 RelationInput = namedtuple('RelationInput', 'relation_id, doc_id, section_id, sent_id, gene_mention_id, gene_wordidxs, pheno_mention_id, pheno_wordidxs, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
 
-def load_sentences(f_path):
-  """
-  Helper fn to load NLP parser output file as SentenceInput objects
-  """
+
+CoreNLPInput = namedtuple('CoreNLPInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
+
+def load_corenlp_sentences(f_path):
+  """Helper fn to load NLP parser output file as CoreNLPInput objects"""
   for line in open(f_path, 'rb'):
     l = read_ptsv(line)
-    yield SentenceInput._make(l + [range(len(l[3]))])
+    yield CoreNLPInput._make(l + [range(len(l[3]))])
 
 
 def tag_candidate(root, words, cid):

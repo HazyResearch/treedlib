@@ -3,6 +3,12 @@ import os
 import re
 import lxml.etree as et
 
+# Load IPython display functionality libs if possible i.e. if in IPython
+try:
+  from IPython.core.display import display_html, HTML, display_javascript, Javascript
+except:
+  pass
+
 class XMLTree:
   """
   A generic tree representation which takes XML as input
@@ -12,8 +18,38 @@ class XMLTree:
     """Calls subroutines to generate JSON form of XML input"""
     self.root = xml_root
 
+    # create a unique id for e.g. canvas id in notebook
+    self.id = str(abs(hash(self.to_str())))
+
+  def _to_json(self, root):
+    js = {
+      'attrib': dict(root.attrib),
+      'children': []
+    }
+    for i,c in enumerate(root):
+      js['children'].append(self._to_json(c))
+    return js
+
+  def to_json(self):
+    return self._to_json(self.root)
+
   def to_str(self):
     return et.tostring(self.root)
+
+  def render_tree(self):
+    """
+    Renders d3 visualization of the d3 tree, for IPython notebook display
+    Depends on html/js files in vis/ directory, which is assumed to be in same dir...
+    """
+    # TODO: Make better control over what format / what attributes displayed @ nodes!
+    # HTML
+    html = open('vis/tree-chart.html').read() % self.id
+    display_html(HTML(data=html))
+
+    # JS
+    JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
+    js = open('vis/tree-chart.js').read() % (json.dumps(self.to_json()), self.id)
+    display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
 def sentence_to_xmltree(sentence_input, prune_root=True):
@@ -38,9 +74,7 @@ def sentence_to_xmltree_sub(s, rid=0):
   if i >= 0:
     for k,v in filter(lambda x : type(x[1]) == list, s._asdict().iteritems()):
       if v[i] is not None:
-
-        # ASCII escape the values...
-        attrib[singular(k)] = ''.join(c for c in str(v[i]) if ord(c) < 128)
+        attrib[singular(k)] = str(v[i])
   root = et.Element('node', attrib=attrib)
   for i,d in enumerate(s.dep_parents):
     if d == rid:
