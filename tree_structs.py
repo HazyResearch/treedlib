@@ -74,7 +74,7 @@ def sentence_to_xmltree_sub(s, rid=0):
   if i >= 0:
     for k,v in filter(lambda x : type(x[1]) == list, s._asdict().iteritems()):
       if v[i] is not None:
-        attrib[singular(k)] = str(v[i])
+        attrib[singular(k)] = ''.join(c for c in str(v[i]) if ord(c) < 128)
   root = et.Element('node', attrib=attrib)
   for i,d in enumerate(s.dep_parents):
     if d == rid:

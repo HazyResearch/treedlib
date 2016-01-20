@@ -43,7 +43,11 @@ def sentence_input_to_xml_input(line):
   """
   attribs = read_ptsv(line)
   si = SentenceInput._make(attribs + [range(len(attribs[3]))])
-  return XMLInput(si.doc_id, si.section_id, si.sent_id, sentence_to_xmltree(si).to_str())
+
+  # Just skip singletons for now...
+  # E.g.: 21131285 Body.0  32      .       .       .       O            0 
+  if type(si.dep_paths) == list:
+    return XMLInput(si.doc_id, si.section_id, si.sent_id, sentence_to_xmltree(si).to_str())
 
 
 
