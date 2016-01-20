@@ -52,9 +52,17 @@ class XMLTree:
     display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
-def sentence_to_xmltree(sentence_input, prune_root=True):
-  """Transforms a util.SentenceInput object into an XMLTree"""
-  root = sentence_to_xmltree_sub(sentence_input, 0)
+def corenlp_to_xmltree(s, prune_root=True):
+  """
+  Transforms an object with CoreNLP dep_path and dep_parent attributes into an XMLTree
+  Will include elements of any array having the same dimensiion as dep_* as node attributes
+  Also adds special word_idx attribute corresponding to original sequence order in sentence
+  """
+  # Add word_idxs if not already present
+  setattr(s, 'word_idxs', list(range(len(s.dep_parents))))
+
+  # Parse recursively
+  root = corenlp_to_xmltree_sub(s, 0)
 
   # Often the return tree will have several roots, where one is the actual root
   # And the rest are just singletons not included in the dep tree parse...
@@ -67,8 +75,7 @@ def sentence_to_xmltree(sentence_input, prune_root=True):
       root = root.findall("./*")[0]
   return XMLTree(root)
 
-def sentence_to_xmltree_sub(s, rid=0):
-  """Recursive subroutine to construct XML tree from util.SentenceInput object"""
+def corenlp_to_xmltree_sub(s, rid=0):
   i = rid - 1
   attrib = {}
   if i >= 0:
@@ -78,7 +85,7 @@ def sentence_to_xmltree_sub(s, rid=0):
   root = et.Element('node', attrib=attrib)
   for i,d in enumerate(s.dep_parents):
     if d == rid:
-      root.append(sentence_to_xmltree_sub(s, i+1))
+      root.append(corenlp_to_xmltree_sub(s, i+1))
   return root
 
 def singular(s):

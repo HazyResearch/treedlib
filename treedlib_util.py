@@ -1,77 +1,115 @@
 from collections import namedtuple
 import re
-from tree_structs import sentence_to_xmltree
 
-def read_ptsv_element(x, splitter='|^|'):
+def print_error(err_string):
+  """Function to write to stderr"""
+  sys.stderr.write("ERROR[UDF]: " + str(err_string) + "\n")
+
+
+BOOL_PARSER = {
+  't' : True,
+  'f' : False,
+  'NULL' : None,
+  '\\N' : None
+}
+TYPE_PARSERS = {
+  'text' : lambda x : str(x.replace('\n', ' ')),
+  'int' : lambda x : int(x.strip()),
+  'float' : lambda x : float(x.strip())
+  'boolean' : lambda x : BOOL_PARSER(x.lower().strip())
+}
+
+def parse_ptsv_element(s, t, sep='|^|', sep2='|~|'):
   """
   Parse an element in psql-compatible tsv format, i.e. {-format arrays
-  Takes a string as input, handles float, int, str vals, and arrays of these types
+  based on provided type and type-parser dictionary
   """
-  if len(x) == 0:
+  # Interpret null first regardless of type
+  if len(s) == 0 or s == '\\N':
     return None
-  elif x[0] == '{':
-    return map(read_ptsv_element, re.split(r'\"?,\"?', re.sub(r'^\{\"?|\"?\}$', '', x)))
-  elif '|^|' in x:
-    return map(read_ptsv_element, x.split('|^|'))
-  for type_fn in [int, float, str]:
+
+  # Handle lists recursively first
+  elif '[]' in t:
+    if re.search(r'^\{|\}$', s):
+      split = re.split(r'\s*,\s*', re.sub(r'^\{\s*|\s*\}$', '', s))
+    else:
+      split = s.split(sep)
+    return [parse_ptsv_element(ss, t[:-2], sep=sep2) for ss in split]
+  
+  # Else parse using parser 
+  else:
     try:
-      return type_fn(x)
-    except ValueError:
-      pass
-  raise ValueError("Type not recognized.")
+      parser = TYPE_PARSERS[t]
+    except KeyError:
+      raise Exception("Unsupported type: %s" % t)
+    return parser(s)
 
 
-def read_ptsv(line):
+class Row:
+  def __str__(self):
+    return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.iteritems()) + ')>'
+  def __repr__(self):
+    return str(self)
+
+
+class PTSVParser:
   """
-  Parse a line in psql-compatible tsv format
-  I.e. tab-separated with psql {-style arrays
+  Initialized with a list of duples (field_name, field_type)
+  Is a factory for simple Row class
+  Parsed from Postgres-style TSV input lines
   """
-  return map(read_ptsv_element, line.rstrip().split('\t'))
+  def __init__(self, fields):
+    self.fields = fields
+
+  def parse_line(self, line):
+    row = Row()
+    for i,col in enumerate(line.rstrip().split('\t')):
+      field_name, field_type = self.fields[i]
+      setattr(row, field_name, parse_ptsv_element(col, field_type))
+    return row
+
+  def parse_stdin(self):
+    for line in sys.stdin:
+      yield self.parse_line(line)
 
 
-# FOR DEEPDIVE:
+def pg_array_escape(tok):
+  """
+  Escape a string that's meant to be in a Postgres array.
+  We double-quote the string and escape backslashes and double-quotes.
+  """
+  return '"%s"' % str(tok).replace('\\', '\\\\').replace('"', '\\\\"')
 
-# Note that we also add word_idxs beyond the currnt dd format...
-SentenceInput = namedtuple('SentenceInput', 'doc_id, section_id, sent_id, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
+
+def list_to_pg_array(l):
+  """Convert a list to a string that PostgreSQL's COPY FROM understands."""
+  return '{%s}' % ','.join(pg_array_escape(x) for x in l)
+
+
+def print_tsv_output(out_record):
+  """Print a tuple as output of TSV extractor."""
+  values = []
+  for x in out_record:
+    if isinstance(x, list) or isinstance(x, tuple):
+      cur_val = list_to_pg_array(x)
+    elif x is None:
+      cur_val = '\N'
+    else:
+      cur_val = x
+    values.append(cur_val)
+  print '\t'.join(str(x) for x in values)
+
+
+# The default PTSVParser config for raw sentence input
+corenlp_parser = PTSVParser([
+  ('doc_id', 'text'),
+  ('section_id', 'text'),
+  ('sent_id', 'int'),
+  ('words', 'text[]'),
+  ('lemmas', 'text[]'),
+  ('poses', 'text[]'),
+  ('ners', 'text[]'),
+  ('dep_paths', 'text[]'),
+  ('dep_parents', 'int[]')])
 
 XMLInput = namedtuple('XMLInput', 'doc_id, section_id, sent_id, xml')
-
-def sentence_input_to_xml_input(line):
-  """
-  Input: A row from the standard CoreNLP-preprocessed, sentences_input table of a deepdive app
-  Ouput: An xmltree_input row
-  """
-  attribs = read_ptsv(line)
-  si = SentenceInput._make(attribs + [range(len(attribs[3]))])
-
-  # Just skip singletons for now...
-  # E.g.: 21131285 Body.0  32      .       .       .       O            0 
-  if type(si.dep_paths) == list:
-    return XMLInput(si.doc_id, si.section_id, si.sent_id, sentence_to_xmltree(si).to_str())
-
-
-
-
-
-
-#SentenceInput = namedtuple('SentenceInput', 'words, lemmas, poses, ners, dep_labels, dep_parents, word_idxs')
-
-#RelationInput = namedtuple('RelationInput', 'relation_id, doc_id, section_id, sent_id, gene_mention_id, gene_wordidxs, pheno_mention_id, pheno_wordidxs, words, lemmas, poses, ners, dep_paths, dep_parents, word_idxs')
-
-#CoreNLPInput = namedtuple('CoreNLPInput', 'doc_id, sent_id, text, words, lemmas, poses, ners, char_idxs, dep_labels, dep_parents, word_idxs')
-
-def load_corenlp_sentences(f_path):
-  """Helper fn to load NLP parser output file as CoreNLPInput objects"""
-  for line in open(f_path, 'rb'):
-    l = read_ptsv(line)
-    yield CoreNLPInput._make(l + [range(len(l[3]))])
-
-
-def tag_candidate(root, words, cid):
-  """
-  Hackey function to tag candidates in xml tree
-  Note for example that this will get messed up if the words comprising the candidate occur
-  elsewhere in the sentence also...
-  """
-  for word in words:
-    root.findall(".//node[@word='%s']" % word)[0].set('cid', cid)
