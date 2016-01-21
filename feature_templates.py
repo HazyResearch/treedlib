@@ -3,7 +3,6 @@ import re
 
 
 # FEATURES TO MAKE:
-# * Filter by tag (e.g. lemmas on dep path between filtered by POS tag)
 #   * Other non-consecutive subsets in general?
 # * Number of other mentions on path
 
