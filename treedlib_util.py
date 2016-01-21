@@ -15,7 +15,7 @@ BOOL_PARSER = {
 TYPE_PARSERS = {
   'text' : lambda x : str(x.replace('\n', ' ')),
   'int' : lambda x : int(x.strip()),
-  'float' : lambda x : float(x.strip())
+  'float' : lambda x : float(x.strip()),
   'boolean' : lambda x : BOOL_PARSER(x.lower().strip())
 }
 
@@ -31,7 +31,7 @@ def parse_ptsv_element(s, t, sep='|^|', sep2='|~|'):
   # Handle lists recursively first
   elif '[]' in t:
     if re.search(r'^\{|\}$', s):
-      split = re.split(r'\s*,\s*', re.sub(r'^\{\s*|\s*\}$', '', s))
+      split = re.split(r'\"?\s*,\s*\"?', re.sub(r'^\{\s*\"?|\"?\s*\}$', '', s))
     else:
       split = s.split(sep)
     return [parse_ptsv_element(ss, t[:-2], sep=sep2) for ss in split]
@@ -48,8 +48,12 @@ def parse_ptsv_element(s, t, sep='|^|', sep2='|~|'):
 class Row:
   def __str__(self):
     return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.iteritems()) + ')>'
+
   def __repr__(self):
     return str(self)
+
+  def _asdict(self):
+    return self.__dict__
 
 
 class PTSVParser:
