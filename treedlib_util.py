@@ -1,5 +1,6 @@
 from collections import namedtuple
 import re
+import sys
 
 def print_error(err_string):
   """Function to write to stderr"""
@@ -64,12 +65,16 @@ class PTSVParser:
   """
   def __init__(self, fields):
     self.fields = fields
+    self.n = len(fields)
 
   def parse_line(self, line):
     row = Row()
-    for i,col in enumerate(line.rstrip().split('\t')):
+    attribs = line.rstrip().split('\t')
+    if len(attribs) != self.n:
+      raise ValueError("%s attributes for %s fields:\n%s" % (len(attribs), self.n, line))
+    for i,attrib in enumerate(attribs):
       field_name, field_type = self.fields[i]
-      setattr(row, field_name, parse_ptsv_element(col, field_type))
+      setattr(row, field_name, parse_ptsv_element(attrib, field_type))
     return row
 
   def parse_stdin(self):
@@ -84,13 +89,11 @@ def pg_array_escape(tok):
   """
   return '"%s"' % str(tok).replace('\\', '\\\\').replace('"', '\\\\"')
 
-
 def list_to_pg_array(l):
   """Convert a list to a string that PostgreSQL's COPY FROM understands."""
   return '{%s}' % ','.join(pg_array_escape(x) for x in l)
 
-
-def print_tsv_output(out_record):
+def print_tsv(out_record):
   """Print a tuple as output of TSV extractor."""
   values = []
   for x in out_record:
@@ -102,18 +105,3 @@ def print_tsv_output(out_record):
       cur_val = x
     values.append(cur_val)
   print '\t'.join(str(x) for x in values)
-
-
-# The default PTSVParser config for raw sentence input
-corenlp_parser = PTSVParser([
-  ('doc_id', 'text'),
-  ('section_id', 'text'),
-  ('sent_id', 'int'),
-  ('words', 'text[]'),
-  ('lemmas', 'text[]'),
-  ('poses', 'text[]'),
-  ('ners', 'text[]'),
-  ('dep_paths', 'text[]'),
-  ('dep_parents', 'int[]')])
-
-XMLInput = namedtuple('XMLInput', 'doc_id, section_id, sent_id, xml')

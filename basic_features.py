@@ -1,14 +1,27 @@
 from feature_templates import *
+import lxml.etree as et
 
 BASIC_ATTRIBS = ['word', 'lemma', 'pos', 'ner']
 BASIC_ATTRIBS_REL = ['word', 'lemma', 'pos', 'ner', 'dep_label']
+
+
+def apply_templates(temps, root, cids):
+  """Applies a set of templates to root, relative to candidates cids"""
+  # Ensure that root is parsed
+  if type(root) == str:
+    root = et.fromstring(root)
+
+  # Apply the templates
+  for temp in temps:
+    for feat in temp.apply(root, cids, 'word_idx'):
+      yield feat
+  
 
 def get_relation_features(root, e1_idxs, e2_idxs, keywords=[]):
   """
   Get relation features given an XMLTree root and the word indexes of the two entities
   """
   temps = []
-
   btwn = Between(Mention(0), Mention(1))
 
   # The full path between
@@ -28,11 +41,8 @@ def get_relation_features(root, e1_idxs, e2_idxs, keywords=[]):
       r = RightNgrams(RightSiblings(Mention(m)), a)
       l = LeftNgrams(LeftSiblings(Mention(m)), a)
       temps += [r, l, Combinations(r, l)]
-
-  # Apply the templates
-  for temp in temps:
-    for feat in temp.apply(root, [e1_idxs, e2_idxs], 'word_idx'):
-      yield feat
+  
+  return apply_templates(temps, root, [e1_idxs, e2_idxs])
 
 
 def get_generic_mention_features(root, cid, keywords):
