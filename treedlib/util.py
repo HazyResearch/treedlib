@@ -2,6 +2,12 @@ from collections import namedtuple
 import re
 import sys
 
+
+def print_gen(gen):
+  """Print the results of a generator one-per-line"""
+  for e in gen:
+    print e
+
 def print_error(err_string):
   """Function to write to stderr"""
   sys.stderr.write("ERROR[UDF]: " + str(err_string) + "\n")
