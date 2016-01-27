@@ -3,6 +3,9 @@ import os
 import re
 import lxml.etree as et
 
+# This should be set by the lib wrapper __init__.py file
+APP_HOME = os.environ["TREEDLIB_LIB"]
+
 # Load IPython display functionality libs if possible i.e. if in IPython
 try:
   from IPython.core.display import display_html, HTML, display_javascript, Javascript
@@ -41,14 +44,13 @@ class XMLTree:
     Renders d3 visualization of the d3 tree, for IPython notebook display
     Depends on html/js files in vis/ directory, which is assumed to be in same dir...
     """
-    # TODO: Make better control over what format / what attributes displayed @ nodes!
     # HTML
-    html = open('vis/tree-chart.html').read() % self.id
+    html = open('%s/vis/tree-chart.html' % APP_HOME).read() % self.id
     display_html(HTML(data=html))
 
     # JS
     JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
-    js = open('vis/tree-chart.js').read() % (json.dumps(self.to_json()), self.id)
+    js = open('%s/vis/tree-chart.js' % APP_HOME).read() % (json.dumps(self.to_json()), self.id)
     display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
@@ -76,9 +78,15 @@ def corenlp_to_xmltree_sub(s, rid=0):
   i = rid - 1
   attrib = {}
 
+  # Get the object as a list of k,v tuples
+  try:
+    tups = s._asdict().iteritems()
+  except AttributeError:
+    tups = dict(s).iteritems()
+
   # Add all attributes
   if i >= 0:
-    for k,v in filter(lambda x : type(x[1]) == list, s._asdict().iteritems()):
+    for k,v in filter(lambda x : type(x[1]) == list, tups):
       if v[i] is not None:
         attrib[singular(k)] = ''.join(c for c in str(v[i]) if ord(c) < 128)
 
