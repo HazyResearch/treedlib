@@ -1,5 +1,6 @@
 from itertools import chain
 import re
+import lxml.etree as et
 
 
 # FEATURES TO MAKE:
@@ -213,6 +214,43 @@ class Combinations(Combinator):
     for f1 in self.ind1.apply(root, cids, cid_attrib):
       for f2 in self.ind2.apply(root, cids, cid_attrib):
         yield '%s+%s' % (f1, f2)
+
+
+# Compile Operator: Compiles a set of feature templates
+# =====================================================
+
+class Compile:
+  """
+  Compiles a set of functions f_i : 2^T -> {0,1}^F_i to a single function 2^T -> {0,1}^F
+  where F <= \sum_i F_i
+  i.e. we can do filtering and/or merging at this point (?)
+  """
+  def __init__(self, ops):
+    self.ops = ops
+
+  def apply(self, root, cids, cid_attrib='word_idx'):
+    # Ensure that root is parsed
+    if type(root) == str:
+      root = et.fromstring(root)
+
+    # Apply the feature templates
+    for op in ops:
+     
+      # Accept iterators or single operators
+      if hasattr(op, '__iter__'):
+        for o in op:
+          for f in o.apply(root, cids, cid_attrib):
+            yield f
+      else:
+        for f in op.apply(root, cids, cid_attrib):
+          yield f
+  
+  def apply_mention(self, root, mention_idxs):
+    return self.apply(self, root, [mention_idxs])
+  
+  def apply_relation(self, root, mention1_idxs, mention2_idxs):
+    return self.apply(self, root, [mention1_idxs, mention2_idxs])
+
    
 
 # TODO: "Between" as dep path vs. sentence...
