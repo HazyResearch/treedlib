@@ -58,9 +58,6 @@ def corenlp_to_xmltree(s, prune_root=True):
   Will include elements of any array having the same dimensiion as dep_* as node attributes
   Also adds special word_idx attribute corresponding to original sequence order in sentence
   """
-  # Add word_idxs if not already present
-  setattr(s, 'word_idxs', list(range(len(s.dep_parents))))
-
   # Parse recursively
   root = corenlp_to_xmltree_sub(s, 0)
 
@@ -78,10 +75,18 @@ def corenlp_to_xmltree(s, prune_root=True):
 def corenlp_to_xmltree_sub(s, rid=0):
   i = rid - 1
   attrib = {}
+
+  # Add all attributes
   if i >= 0:
     for k,v in filter(lambda x : type(x[1]) == list, s._asdict().iteritems()):
       if v[i] is not None:
         attrib[singular(k)] = ''.join(c for c in str(v[i]) if ord(c) < 128)
+
+    # Add word_idx if not present
+    if 'word_idx' not in attrib:
+      attrib['word_idx'] = str(i)
+
+  # Build tree recursively
   root = et.Element('node', attrib=attrib)
   for i,d in enumerate(s.dep_parents):
     if d == rid:

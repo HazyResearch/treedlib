@@ -1,4 +1,4 @@
-from feature_templates import *
+from templates import *
 import lxml.etree as et
 
 BASIC_ATTRIBS = ['word', 'lemma', 'pos', 'ner']
@@ -30,7 +30,7 @@ def get_relation_features(root, e1_idxs, e2_idxs, keywords=[]):
 
   # The tri-grams between
   for a in BASIC_ATTRIBS_REL:
-    temps.append(Ngrams(btwn, a, 3))
+    temps.append(Ngrams(btwn, a, (2,3)))
 
   # The VBs between
   temps.append(Ngrams(Filter(btwn, 'pos', 'VB'), 'lemma', [1,3]))
@@ -38,9 +38,9 @@ def get_relation_features(root, e1_idxs, e2_idxs, keywords=[]):
   # The window features for each of the mentions
   for m in [0,1]:
     for a in BASIC_ATTRIBS:
-      r = RightNgrams(RightSiblings(Mention(m)), a)
-      l = LeftNgrams(LeftSiblings(Mention(m)), a)
-      temps += [r, l, Combinations(r, l)]
+      temps.append(RightNgrams(RightSiblings(Mention(m)), a))
+      temps.append(LeftNgrams(LeftSiblings(Mention(m)), a))
+      #temps += [r, l, Combinations(r, l)]
   
   return apply_templates(temps, root, [e1_idxs, e2_idxs])
 
