@@ -234,7 +234,7 @@ class Compile:
       root = et.fromstring(root)
 
     # Apply the feature templates
-    for op in ops:
+    for op in self.ops:
      
       # Accept iterators or single operators
       if hasattr(op, '__iter__'):
@@ -246,16 +246,14 @@ class Compile:
           yield f
   
   def apply_mention(self, root, mention_idxs):
-    return self.apply(self, root, [mention_idxs])
+    return self.apply(root, [mention_idxs])
   
   def apply_relation(self, root, mention1_idxs, mention2_idxs):
-    return self.apply(self, root, [mention1_idxs, mention2_idxs])
+    return self.apply(root, [mention1_idxs, mention2_idxs])
 
    
 
 # TODO: "Between" as dep path vs. sentence...
-
-# TODO: Get all DDLIB features re-implemented...
 
 # TODO: CONFIG file...?
 
