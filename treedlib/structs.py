@@ -66,7 +66,7 @@ def corenlp_to_xmltree(s, prune_root=True):
   # Convert input object to dictionary
   if type(s) != dict:
     try:
-      s = dict(s)
+      s = s.__dict__ if hasattr(s, '__dict__') else dict(s)
     except:
       raise ValueError("Cannot convert input object to dict")
 
