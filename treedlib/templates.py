@@ -225,8 +225,17 @@ class Compile:
   where F <= \sum_i F_i
   i.e. we can do filtering and/or merging at this point (?)
   """
-  def __init__(self, ops):
-    self.ops = ops
+  def __init__(self, op_list):
+    self.op_list = op_list
+  
+  def _iterops(self):
+    """Iterate over the operators provided, accepting list of single or list elements"""
+    for ops in self.op_list:
+      if hasattr(ops, '__iter__'):
+        for op in ops:
+          yield op
+      else:
+          yield ops
 
   def apply(self, root, cids, cid_attrib='word_idx'):
     # Ensure that root is parsed
@@ -234,23 +243,18 @@ class Compile:
       root = et.fromstring(root)
 
     # Apply the feature templates
-    for op in self.ops:
-     
-      # Accept iterators or single operators
-      if hasattr(op, '__iter__'):
-        for o in op:
-          for f in o.apply(root, cids, cid_attrib):
-            yield f
-      else:
-        for f in op.apply(root, cids, cid_attrib):
-          yield f
+    for op in self._iterops():
+      for f in op.apply(root, cids, cid_attrib):
+        yield f
   
   def apply_mention(self, root, mention_idxs):
     return self.apply(root, [mention_idxs])
   
   def apply_relation(self, root, mention1_idxs, mention2_idxs):
     return self.apply(root, [mention1_idxs, mention2_idxs])
-
+  
+  def __repr__(self):
+    return '\n'.join(str(op) for op in self._iterops())
    
 
 # TODO: "Between" as dep path vs. sentence...
