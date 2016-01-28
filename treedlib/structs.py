@@ -78,15 +78,25 @@ def corenlp_to_xmltree_sub(s, rid=0):
   i = rid - 1
   attrib = {}
 
-  # Get the object as a list of k,v tuples
-  try:
-    tups = s._asdict().iteritems()
-  except AttributeError:
-    tups = dict(s).iteritems()
+  # Convert input object to dictionary
+  if type(s) != dict:
+    try:
+      s = dict(s)
+    except:
+      raise ValueError("Cannot convert input object to dict")
 
-  # Add all attributes
+  # Use the dep_parents array as a guide: ensure it is present and a list of ints
+  if not('dep_parents' in s and type(s['dep_parents']) == list):
+    raise ValueError("Input CoreNLP object must have a 'dep_parents' attribute which is a list")
+  try:
+    dep_parents = map(int, s['dep_parents'])
+  except:
+    raise ValueError("'dep_parents' attribute must be a list of ints")
+  N = len(dep_parents)
+
+  # Add all attributes that have the same shape as dep_parents
   if i >= 0:
-    for k,v in filter(lambda x : type(x[1]) == list, tups):
+    for k,v in filter(lambda t : type(t[1]) == list and len(t[1]) == N, s.iteritems()):
       if v[i] is not None:
         attrib[singular(k)] = ''.join(c for c in str(v[i]) if ord(c) < 128)
 
@@ -96,7 +106,7 @@ def corenlp_to_xmltree_sub(s, rid=0):
 
   # Build tree recursively
   root = et.Element('node', attrib=attrib)
-  for i,d in enumerate(s.dep_parents):
+  for i,d in enumerate(dep_parents):
     if d == rid:
       root.append(corenlp_to_xmltree_sub(s, i+1))
   return root
