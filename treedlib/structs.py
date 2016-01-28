@@ -17,9 +17,10 @@ class XMLTree:
   A generic tree representation which takes XML as input
   Includes subroutines for conversion to JSON & for visualization based on js form
   """
-  def __init__(self, xml_root):
+  def __init__(self, xml_root, words=None):
     """Calls subroutines to generate JSON form of XML input"""
     self.root = xml_root
+    self.words = words
 
     # create a unique id for e.g. canvas id in notebook
     self.id = str(abs(hash(self.to_str())))
@@ -39,18 +40,20 @@ class XMLTree:
   def to_str(self):
     return et.tostring(self.root)
 
-  def render_tree(self):
+  def render_tree(self, highlight=[]):
     """
     Renders d3 visualization of the d3 tree, for IPython notebook display
     Depends on html/js files in vis/ directory, which is assumed to be in same dir...
     """
     # HTML
-    html = open('%s/vis/tree-chart.html' % APP_HOME).read() % self.id
+    WORD = '<span class="word-' + self.id + '-%s">%s</span>'
+    words = ' '.join(WORD % (i,w) for i,w in enumerate(self.words)) if self.words else ''
+    html = open('%s/vis/tree-chart.html' % APP_HOME).read() % (self.id, self.id, words) 
     display_html(HTML(data=html))
 
     # JS
     JS_LIBS = ["http://d3js.org/d3.v3.min.js"]
-    js = open('%s/vis/tree-chart.js' % APP_HOME).read() % (json.dumps(self.to_json()), self.id)
+    js = open('%s/vis/tree-chart.js' % APP_HOME).read() % (self.id, json.dumps(self.to_json()), str(highlight))
     display_javascript(Javascript(data=js, lib=JS_LIBS))
 
 
@@ -60,24 +63,6 @@ def corenlp_to_xmltree(s, prune_root=True):
   Will include elements of any array having the same dimensiion as dep_* as node attributes
   Also adds special word_idx attribute corresponding to original sequence order in sentence
   """
-  # Parse recursively
-  root = corenlp_to_xmltree_sub(s, 0)
-
-  # Often the return tree will have several roots, where one is the actual root
-  # And the rest are just singletons not included in the dep tree parse...
-  # We optionally remove these singletons and then collapse the root if only one child left
-  if prune_root:
-    for c in root:
-      if len(c) == 0:
-        root.remove(c)
-    if len(root) == 1:
-      root = root.findall("./*")[0]
-  return XMLTree(root)
-
-def corenlp_to_xmltree_sub(s, rid=0):
-  i = rid - 1
-  attrib = {}
-
   # Convert input object to dictionary
   if type(s) != dict:
     try:
@@ -92,6 +77,24 @@ def corenlp_to_xmltree_sub(s, rid=0):
     dep_parents = map(int, s['dep_parents'])
   except:
     raise ValueError("'dep_parents' attribute must be a list of ints")
+
+  # Parse recursively
+  root = corenlp_to_xmltree_sub(s, dep_parents, 0)
+
+  # Often the return tree will have several roots, where one is the actual root
+  # And the rest are just singletons not included in the dep tree parse...
+  # We optionally remove these singletons and then collapse the root if only one child left
+  if prune_root:
+    for c in root:
+      if len(c) == 0:
+        root.remove(c)
+    if len(root) == 1:
+      root = root.findall("./*")[0]
+  return XMLTree(root, words=s['words'])
+
+def corenlp_to_xmltree_sub(s, dep_parents, rid=0):
+  i = rid - 1
+  attrib = {}
   N = len(dep_parents)
 
   # Add all attributes that have the same shape as dep_parents
@@ -108,7 +111,7 @@ def corenlp_to_xmltree_sub(s, rid=0):
   root = et.Element('node', attrib=attrib)
   for i,d in enumerate(dep_parents):
     if d == rid:
-      root.append(corenlp_to_xmltree_sub(s, i+1))
+      root.append(corenlp_to_xmltree_sub(s, dep_parents, i+1))
   return root
 
 def singular(s):
