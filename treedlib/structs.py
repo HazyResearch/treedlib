@@ -2,6 +2,7 @@ import json
 import os
 import re
 import lxml.etree as et
+import sys
 
 # This should be set by the lib wrapper __init__.py file
 APP_HOME = os.environ["TREEDLIB_LIB"]
@@ -77,6 +78,11 @@ def corenlp_to_xmltree(s, prune_root=True):
     dep_parents = map(int, s['dep_parents'])
   except:
     raise ValueError("'dep_parents' attribute must be a list of ints")
+
+  # Also ensure that we are using CoreNLP-native indexing (root=0, 1-base word indexes)!
+  b = min(dep_parents)
+  if b != 0:
+    dep_parents = map(lambda j : j - b, dep_parents)
 
   # Parse recursively
   root = corenlp_to_xmltree_sub(s, dep_parents, 0)
