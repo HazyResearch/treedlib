@@ -1,8 +1,8 @@
 from templates import *
 import lxml.etree as et
 
-BASIC_ATTRIBS = ['word', 'lemma', 'pos', 'ner']
-BASIC_ATTRIBS_REL = ['word', 'lemma', 'pos', 'ner', 'dep_label']
+#BASIC_ATTRIBS_REL = ['word', 'lemma', 'pos', 'ner', 'dep_label']
+BASIC_ATTRIBS_REL = ['lemma', 'dep_label']
 
 m0 = Mention(0)
 m1 = Mention(1)
