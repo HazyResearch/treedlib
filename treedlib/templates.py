@@ -58,9 +58,9 @@ class RightSiblings(NodeSet):
 
 class Parents(NodeSet):
   """Gets parents of the node set"""
-  def __init__(self, ns):
+  def __init__(self, ns, num_parents=1):
     self.label = 'PARENTS-OF-%s' % ns.label
-    self.xpath = ns.xpath + '[1]/ancestor::*'
+    self.xpath = ns.xpath + '[1]/ancestor::*[position()<%s]' % (num_parents + 1)
 
 
 class Between(NodeSet):

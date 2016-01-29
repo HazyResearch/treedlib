@@ -15,8 +15,8 @@ get_relation_features = Compile([
   # The full dependency path between
   [Indicator(btwn, a) for a in BASIC_ATTRIBS_REL],
 
-  # The path to the root: ngram lemmas along it
-  Ngrams(Parents(btwn), 'lemma', (1,3)),
+  # The *first element on the* path to the root: ngram lemmas along it
+  Ngrams(Parents(btwn, 1), 'lemma', (1,3)),
 
   # The ngrams between
   [Ngrams(btwn, a, (2,3)) for a in BASIC_ATTRIBS_REL],
