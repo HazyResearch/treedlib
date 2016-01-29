@@ -21,8 +21,8 @@ get_relation_features = Compile([
   # The ngrams between
   [Ngrams(btwn, a, (2,3)) for a in BASIC_ATTRIBS_REL],
 
-  # The VBs between
-  Ngrams(Filter(btwn, 'pos', 'VB'), 'lemma', (1,3)),
+  # The VBs and NNs between
+  [Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
 
   # The siblings of each mention
   [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
