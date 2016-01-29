@@ -231,9 +231,14 @@ class Compile:
   def _iterops(self):
     """Iterate over the operators provided, accepting list of single or list elements"""
     for ops in self.op_list:
-      if hasattr(ops, '__iter__'):
+      if type(ops) == list:
         for op in ops:
           yield op
+      
+      # Guard against e.g. generators where after one iteration through, is expended
+      # Thus after being applied to one data item, would be done!!
+      elif hasattr(ops, '__iter__'):
+        raise ValueError("Iterables of operators in Compile must be list type.")
       else:
           yield ops
 
