@@ -110,6 +110,9 @@ class Indicator:
     m = [" or ".join("@%s='%s'" % (cid_attrib, c) for c in cid) for cid in cids] 
     xpath = self.ns.xpath.format(*m)
 
+    # INV tag if binary relation
+    inv = 'INV_' if len(cids) == 2 and cids[0][0] > cids[1][0] else ''
+
     # Specifically handle single attrib or multiple attribs per node here
     attribs = re.split(r'\s*,\s*', self.attribs)
     if len(attribs) > 1:
@@ -120,7 +123,7 @@ class Indicator:
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
       for feat in self._get_features(res):
-        yield '%s:%s[%s]' % ('|'.join(attribs).upper(), self.ns.label, feat)
+        yield '%s%s:%s[%s]' % (inv, '|'.join(attribs).upper(), self.ns.label, feat)
 
   def _get_features(self, res):
     """
