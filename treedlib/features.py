@@ -30,6 +30,6 @@ get_relation_features = Compile([
   [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
   [LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
   [RightNgrams(RightSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-  [LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL]
+  [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL]
 
 ]).apply_relation
