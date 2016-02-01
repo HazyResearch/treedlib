@@ -98,7 +98,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx'):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
@@ -123,7 +123,10 @@ class Indicator:
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
       for feat in self._get_features(res):
-        yield '%s%s:%s[%s]' % (inv, '|'.join(attribs).upper(), self.ns.label, feat)
+        if feat_label:
+          yield '%s%s:%s[%s]' % (inv, '|'.join(attribs).upper(), self.ns.label, feat)
+        else:
+          yield feat
 
   def _get_features(self, res):
     """
