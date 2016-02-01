@@ -56,6 +56,14 @@ class RightSiblings(NodeSet):
     self.xpath = '%s[1]/following-sibling::*[position() <= %s]' % (ns.xpath, w)
 
 
+# TODO: These should be "Descendants" / "Ancestors"...
+class Children(NodeSet):
+  """Gets children of the node set"""
+  def __init__(self, ns):
+    self.label = 'CHILDREN-OF-%s' % ns.label
+    self.xpath = ns.xpath + '[1]/*'
+
+
 class Parents(NodeSet):
   """Gets parents of the node set"""
   def __init__(self, ns, num_parents=1):
@@ -135,9 +143,16 @@ class Indicator:
     """
     return ['_'.join(res)]
 
-  def print_apply(self, root, cids, cid_attrib='word_idx'):
-    for feat in self.apply(root, cids, cid_attrib):
+  def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
+    for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label):
       print feat
+
+  def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False):
+    """Get results as a set- mostly for use in DSR applications"""
+    res = set()
+    for feat in self.apply(root, cids, cid_attrib=cid_attrib, feat_label=feat_label):
+      res.add(feat)
+    return res
   
   def __repr__(self):
     return '<%s:%s:%s, xpath="%s">' % (self.__class__.__name__, self.attribs, self.ns.label, self.ns.xpath)
