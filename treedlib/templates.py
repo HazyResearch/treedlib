@@ -272,6 +272,18 @@ class Compile:
     for op in self._iterops():
       for f in op.apply(root, cids, cid_attrib):
         yield f
+
+  def result_set(self, root, cids, cid_attrib='word_idx'):
+    """Takes the union of the result sets"""
+    # Ensure that root is parsed
+    if type(root) == str:
+      root = et.fromstring(root)
+
+    # Apply the feature templates
+    res = set()
+    for op in self._iterops():
+      res.update(op.result_set(root, cids, cid_attrib))
+    return res
   
   def apply_mention(self, root, mention_idxs):
     return self.apply(root, [mention_idxs])
