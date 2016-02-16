@@ -33,3 +33,11 @@ get_relation_features = Compile([
   [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL]
 
 ]).apply_relation
+
+"""
+For calibrating the bin sizes
+"""
+get_relation_binning_features = Compile([
+  Indicator(Between(Mention(0), Mention(1)), 'word'),
+  Indicator(SeqBetween(), 'word')
+]).apply_relation

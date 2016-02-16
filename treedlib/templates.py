@@ -30,9 +30,7 @@ class NodeSet:
 
 class Mention(NodeSet):
   """Gets candidate mention nodes"""
-  def __init__(self, ns=None, cid=0):
-    if ns is not None:
-      self.__dict__.update(ns.__dict__) # inherit child object's attributes
+  def __init__(self, cid=0):
     self.label = 'MENTION'
     self.xpath = "//*[{%s}]" % str(cid)
 
@@ -95,16 +93,12 @@ class SeqBetween(NodeSet):
   """
   Gets the sequence of nodes in between, according to *sentence* (not dep tree) order
   """
-  def __init__(self, cids, cid_attrib='word_idx'):
+  def __init__(self, seq_attrib='word_idx'):
+    # TODO: Extend to take in pair of NodeSets?
+    self.xpath = '//*'
     self.label = 'SEQ-BETWEEN'
-
-    # Get the boundary node word indexes; assume candidate mentions not overlapping
-    a, b = cids
-    idx1, idx2 = (max(a), min(b)) if max(a) < min(b) else (max(b), min(a))
-    self.xpath = "//*[number(@{0}) > {1} and number(@{0}) < {2}]".format(cid_attrib, idx1, idx2)
-
-    # Specify that post-xpath sorting needs to be done
-    self.psort = cid_attrib
+    self.seq_attrib = seq_attrib # Logic gets pushed to Indicator...
+    self.psort = seq_attrib # Specify that post-xpath sorting needs to be done
 
 
 class Filter(NodeSet):
@@ -151,19 +145,30 @@ class Indicator:
     # Get nodes
     nodes = root.xpath(xpath)
 
+    # Perform seq filter here
+    if hasattr(self.ns, 'seq_attrib') and self.ns.seq_attrib is not None:
+      seqa = self.ns.seq_attrib
+      b = (cids[0][-1], cids[-1][0]) if cids[0][-1] < cids[-1][0] else (cids[-1][-1], cids[0][0])
+      nodes = filter(lambda n : n.get(seqa) is not None and int(n.get(seqa)) > b[0] and int(n.get(seqa)) < b[1], nodes)
+
     # If sort specified, perform here
     if hasattr(self.ns, 'psort') and self.ns.psort is not None:
       nodes.sort(key=lambda n : int(n.get(self.ns.psort)))
 
     # Specifically handle single attrib or multiple attribs per node here
-    attribs = re.split(r'\s*,\s*', self.attribs)
-    res = ['|'.join(str(node.get(a)) for a in attribs) for node in nodes]
+    try:
+      attribs = re.split(r'\s*,\s*', self.attribs)
+      res = ['|'.join(str(node.get(a)) for a in attribs) for node in nodes]
+      label = '%s%s:%s' % (inv, '|'.join(attribs).upper(), self.ns.label)
+    except AttributeError:
+      res = nodes
+      label = '%s%s' % (inv, self.ns.label)
 
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
       for feat in self._get_features(res):
         if feat_label:
-          yield '%s%s:%s[%s]' % (inv, '|'.join(attribs).upper(), self.ns.label, feat)
+          yield '%s[%s]' % (label, feat)
         else:
           yield feat
 
@@ -240,6 +245,32 @@ class Regexp(Indicator):
     yield 'RGX:%s=%s' % (self.rgx_label, re.search(self.rgx, self.sep.join(res)) is not None)
 
 
+class LengthBin(Indicator):
+  """
+  Return indicator features for the length (size) of the node set
+  binned according to provided values
+  bins should be a list of INTS
+  """
+  def __init__(self, ns, bin_divs):
+    self.ns = ns
+    self.bins = []
+    for i,d in enumerate(bin_divs):
+      if i == 0:
+        self.bins.append((0,d-1))
+      else:
+        self.bins.append((bin_divs[i-1],d-1))
+
+  def _get_features(self, res):
+    lbin = None
+    l = len(res)
+    for b in self.bins:
+      if l >= b[0] and l <= b[1]:
+        lbin = b
+        break
+    if lbin is None:
+      lbin = (self.bins[-1][1]+1, 'inf')
+    yield 'LEN:%s-%s' % lbin
+
 # COMBINATOR:
 # ===========
 
@@ -303,7 +334,7 @@ class Compile:
     for op in self._iterops():
       for f in op.apply(root, cids, cid_attrib):
         yield f
-
+  
   def result_set(self, root, cids, cid_attrib='word_idx'):
     """Takes the union of the result sets"""
     # Ensure that root is parsed
