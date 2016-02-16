@@ -8,6 +8,9 @@ m0 = Mention(0)
 m1 = Mention(1)
 btwn = Between(m0, m1)
 
+dl = LengthBin(btwn, [3,4,6])
+sl = LengthBin(SeqBetween(), [5,8,14])
+
 """
 Args: root, mention1_idxs, mention2_idxs
 """
@@ -20,11 +23,12 @@ get_relation_features = Compile([
   Ngrams(Parents(btwn, 3), 'lemma', (1,3)),
 
   # The ngrams between
-  [Ngrams(btwn, a, (2,3)) for a in BASIC_ATTRIBS_REL],
-  Ngrams(btwn, 'dep_label,lemma', (2,3)),
+
+  [Combinations(dl, Ngrams(btwn, a, (2,3))) for a in BASIC_ATTRIBS_REL],
+  Combinations(dl, Ngrams(btwn, 'dep_label,lemma', (2,3))),
 
   # The VBs and NNs between
-  [Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
+  [Combinations(dl, Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3))) for p in ['VB', 'NN']],
 
   # The siblings of each mention
   [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
@@ -33,8 +37,8 @@ get_relation_features = Compile([
   [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
 
   # The ngrams on the *word sequence* between
-  Ngrams(SeqBetween(), 'lemma', (1,3)),
-  Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))
+  Combinations(sl, Ngrams(SeqBetween(), 'lemma', (1,3))),
+  Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2)))
 
 ]).apply_relation
 

@@ -284,16 +284,16 @@ class Combinator:
     self.ind1 = ind1
     self.ind2 = ind2
 
-  def apply(self, root, cids, cid_attrib):
+  def apply(self, root, cids, cid_attrib='word_idx'):
     return self.ind1.apply(root, cids, cid_attrib)
 
-  def print_apply(self, root, cids, cid_attrib):
+  def print_apply(self, root, cids, cid_attrib='word_idx'):
     return self.apply(root, cids, cid_attrib)
   
 
 class Combinations(Combinator):
   """Generates all *pairs* of features"""
-  def apply(self, root, cids, cid_attrib):
+  def apply(self, root, cids, cid_attrib='word_idx'):
     for f1 in self.ind1.apply(root, cids, cid_attrib):
       for f2 in self.ind2.apply(root, cids, cid_attrib):
         yield '%s+%s' % (f1, f2)
