@@ -23,12 +23,14 @@ get_relation_features = Compile([
   Ngrams(Parents(btwn, 3), 'lemma', (1,3)),
 
   # The ngrams between
-
-  [Combinations(dl, Ngrams(btwn, a, (2,3))) for a in BASIC_ATTRIBS_REL],
-  Combinations(dl, Ngrams(btwn, 'dep_label,lemma', (2,3))),
+  #[Combinations(dl, Ngrams(btwn, a, (2,3))) for a in BASIC_ATTRIBS_REL],
+  #Combinations(dl, Ngrams(btwn, 'dep_label,lemma', (2,3))),
+  [Ngrams(btwn, a, (2,3)) for a in BASIC_ATTRIBS_REL],
+  Ngrams(btwn, 'dep_label,lemma', (2,3)),
 
   # The VBs and NNs between
-  [Combinations(dl, Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3))) for p in ['VB', 'NN']],
+  #[Combinations(dl, Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3))) for p in ['VB', 'NN']],
+  [Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
 
   # The siblings of each mention
   [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
@@ -38,7 +40,11 @@ get_relation_features = Compile([
 
   # The ngrams on the *word sequence* between
   Combinations(sl, Ngrams(SeqBetween(), 'lemma', (1,3))),
-  Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2)))
+  Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))),
+
+  # The length bin features
+  sl,
+  dl
 
 ]).apply_relation
 
