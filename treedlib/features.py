@@ -30,7 +30,11 @@ get_relation_features = Compile([
   [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
   [LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
   [RightNgrams(RightSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-  [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL]
+  [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
+
+  # The ngrams on the *word sequence* between
+  Ngrams(SeqBetween(), 'lemma', (1,3)),
+  Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))
 
 ]).apply_relation
 
