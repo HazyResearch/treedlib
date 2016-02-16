@@ -19,9 +19,10 @@ class NodeSet:
   We use these to get the *subtree* or set of nodes that our indicicator features will
   operate over
   """
-  def __init__(self):
-    self.label = 'NODE_SET'
-    self.xpath = '//*'
+  def __init__(self, label='NODESET', xpath='//*', psort=None):
+    self.label = label
+    self.xpath = xpath
+    self.psort = psort  # Attribute to sort on post-xpath execution
 
   def __repr__(self):
     return '<%s, xpath="%s">' % (self.label, self.xpath)
@@ -29,7 +30,9 @@ class NodeSet:
 
 class Mention(NodeSet):
   """Gets candidate mention nodes"""
-  def __init__(self, cid=0):
+  def __init__(self, ns=None, cid=0):
+    if ns is not None:
+      self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'MENTION'
     self.xpath = "//*[{%s}]" % str(cid)
 
@@ -37,6 +40,8 @@ class Mention(NodeSet):
 class Keyword(NodeSet):
   """Gets keyword nodes"""
   def __init__(self, keyword, ns=None):
+    if ns is not None:
+      self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'KEYWORD-IN-%s' % ns.label if ns else 'KEYWORD'
     self.xpath = ns.xpath if ns else '//*'
     self.xpath += "[@word='%s']" % keyword
@@ -45,6 +50,7 @@ class Keyword(NodeSet):
 class LeftSiblings(NodeSet):
   """Gets preceding siblings"""
   def __init__(self, ns, w=3):
+    self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'LEFT-OF-%s' % ns.label
     self.xpath = '%s[1]/preceding-sibling::*[position() <= %s]' % (ns.xpath, w)
 
@@ -52,6 +58,7 @@ class LeftSiblings(NodeSet):
 class RightSiblings(NodeSet):
   """Gets following siblings"""
   def __init__(self, ns, w=3):
+    self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'RIGHT-OF-%s' % ns.label
     self.xpath = '%s[1]/following-sibling::*[position() <= %s]' % (ns.xpath, w)
 
@@ -60,6 +67,7 @@ class RightSiblings(NodeSet):
 class Children(NodeSet):
   """Gets children of the node set"""
   def __init__(self, ns):
+    self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'CHILDREN-OF-%s' % ns.label
     self.xpath = ns.xpath + '[1]/*'
 
@@ -67,6 +75,7 @@ class Children(NodeSet):
 class Parents(NodeSet):
   """Gets parents of the node set"""
   def __init__(self, ns, num_parents=1):
+    self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'PARENTS-OF-%s' % ns.label
     self.xpath = ns.xpath + '[1]/ancestor::*[position()<%s]' % (num_parents + 1)
 
@@ -77,8 +86,25 @@ class Between(NodeSet):
   Note: this requires some ugly xpath... could change this to non-xpath method
   """
   def __init__(self, ns1, ns2):
+    self.__dict__.update(ns1.__dict__) # inherit *FIRST* child object's attributes
     self.label = 'BETWEEN-%s-and-%s' % (ns1.label, ns2.label)
     self.xpath = "{0}[1]/ancestor-or-self::*[count(. | {1}[1]/ancestor-or-self::*) = count({1}[1]/ancestor-or-self::*)][1]/descendant-or-self::*[(count(.{0}) = count({0})) or (count(.{1}) = count({1}))]".format(ns1.xpath, ns2.xpath)
+
+
+class SeqBetween(NodeSet):
+  """
+  Gets the sequence of nodes in between, according to *sentence* (not dep tree) order
+  """
+  def __init__(self, cids, cid_attrib='word_idx'):
+    self.label = 'SEQ-BETWEEN'
+
+    # Get the boundary node word indexes; assume candidate mentions not overlapping
+    a, b = cids
+    idx1, idx2 = (max(a), min(b)) if max(a) < min(b) else (max(b), min(a))
+    self.xpath = "//*[number(@{0}) > {1} and number(@{0}) < {2}]".format(cid_attrib, idx1, idx2)
+
+    # Specify that post-xpath sorting needs to be done
+    self.psort = cid_attrib
 
 
 class Filter(NodeSet):
@@ -87,6 +113,7 @@ class Filter(NodeSet):
   Note the option to do exact match or starts with (could be expanded; useful for POS now...)
   """
   def __init__(self, ns, filter_attr, filter_by, starts_with=True):
+    self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'FILTER-BY(%s=%s):%s' % (filter_attr, filter_by, ns.label)
     temp = "[starts-with(@%s, '%s')]" if starts_with else "[@%s='%s']"
     self.xpath = ns.xpath + temp % (filter_attr, filter_by)
@@ -121,12 +148,16 @@ class Indicator:
     # INV tag if binary relation
     inv = 'INV_' if len(cids) == 2 and cids[0][0] > cids[1][0] else ''
 
+    # Get nodes
+    nodes = root.xpath(xpath)
+
+    # If sort specified, perform here
+    if hasattr(self.ns, 'psort') and self.ns.psort is not None:
+      nodes.sort(key=lambda n : int(n.get(self.ns.psort)))
+
     # Specifically handle single attrib or multiple attribs per node here
     attribs = re.split(r'\s*,\s*', self.attribs)
-    if len(attribs) > 1:
-      res = ['|'.join(str(node.get(a)) for a in attribs) for node in root.xpath(xpath)]
-    else:
-      res = map(str, root.xpath(xpath + '/@' + attribs[0]))
+    res = ['|'.join(str(node.get(a)) for a in attribs) for node in nodes]
 
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
