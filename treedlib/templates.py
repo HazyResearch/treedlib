@@ -35,16 +35,6 @@ class Mention(NodeSet):
     self.xpath = "//*[{%s}]" % str(cid)
 
 
-class Keyword(NodeSet):
-  """Gets keyword nodes"""
-  def __init__(self, keyword, ns=None):
-    if ns is not None:
-      self.__dict__.update(ns.__dict__) # inherit child object's attributes
-    self.label = 'KEYWORD-IN-%s' % ns.label if ns else 'KEYWORD'
-    self.xpath = ns.xpath if ns else '//*'
-    self.xpath += "[@word='%s']" % keyword
-
-
 class LeftSiblings(NodeSet):
   """Gets preceding siblings"""
   def __init__(self, ns, w=3):
@@ -230,8 +220,8 @@ class LeftNgrams(Indicator):
 
 class Regexp(Indicator):
   """
-  Return indicator features defined by regular expressions applied to the 
-  concatenation of the result set strings
+  Return indicator features if the regular expression applied to the 
+  concatenation of the result set strings is not None
   """
   def __init__(self, ns, attribs, rgx, rgx_label, sep=' '):
     self.ns = ns
@@ -239,10 +229,12 @@ class Regexp(Indicator):
     self.rgx = rgx
     self.rgx_label = rgx_label
     self.sep = sep
+    self.psort = 'word_idx' # Sort by word order...
 
-  # TODO: Sort by word order...
   def _get_features(self, res):
-    yield 'RGX:%s=%s' % (self.rgx_label, re.search(self.rgx, self.sep.join(res)) is not None)
+    match = re.search(self.rgx, self.sep.join(res))
+    if match is not None:
+      yield 'RGX:%s' % self.rgx_label
 
 
 class LengthBin(Indicator):
@@ -270,6 +262,12 @@ class LengthBin(Indicator):
     if lbin is None:
       lbin = (self.bins[-1][1]+1, 'inf')
     yield 'LEN:%s-%s' % lbin
+
+
+#class DictionaryIntersect(Indicator):
+  """
+  Return a feature
+
 
 # COMBINATOR:
 # ===========
