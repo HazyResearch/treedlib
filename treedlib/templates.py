@@ -177,7 +177,7 @@ class Indicator:
     Given a result set of attribute values, return a set of strings representing the features
     This should be the default method to replace for Indicator objects
     """
-    return ['_'.join(res)]
+    return [' '.join(res)]
 
   def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
     for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label):
@@ -213,19 +213,19 @@ class Ngrams(Indicator):
       r = [self.ng - 1]
     else:
       r = range(self.ng[0] - 1, min(len(res), self.ng[1]))
-    return chain.from_iterable(['_'.join(res[s:s+l+1]) for s in range(len(res)-l)] for l in r)
+    return chain.from_iterable([' '.join(res[s:s+l+1]) for s in range(len(res)-l)] for l in r)
 
 
 class RightNgrams(Indicator):
   """Return all the ngrams which start at position 0"""
   def _get_features(self, res):
-    return ['_'.join(res[:l]) for l in range(1, len(res)+1)]
+    return [' '.join(res[:l]) for l in range(1, len(res)+1)]
     
 
 class LeftNgrams(Indicator):
   """Return all the ngrams which start at position 0"""
   def _get_features(self, res):
-    return ['_'.join(res[l:]) for l in range(len(res))]
+    return [' '.join(res[l:]) for l in range(len(res))]
     
 
 class Regexp(Indicator):
@@ -357,11 +357,7 @@ class Compile:
     return '\n'.join(str(op) for op in self._iterops())
    
 
-# TODO: "Between" as dep path vs. sentence...
-
 # TODO: CONFIG file...?
-
-# TODO: Features such as- on same level? < k hops apart? etc.
 
 # TODO: Think about doc-level features and how to implement this
 
