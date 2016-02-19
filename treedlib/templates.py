@@ -1,11 +1,7 @@
 from itertools import chain
 import re
 import lxml.etree as et
-
-
-# FEATURES TO MAKE:
-#   * Other non-consecutive subsets in general?
-# * Number of other mentions on path
+from collections import defaultdict
 
 
 # NODESET:
@@ -117,7 +113,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
@@ -130,7 +126,7 @@ class Indicator:
     xpath = self.ns.xpath.format(*m)
 
     # INV tag if binary relation
-    inv = 'INV_' if len(cids) == 2 and cids[0][0] > cids[1][0] else ''
+    inv = 'INV_' if inv_tag and len(cids) == 2 and cids[0][0] > cids[1][0] else ''
 
     # Get nodes
     nodes = root.xpath(xpath)
@@ -264,9 +260,55 @@ class LengthBin(Indicator):
     yield 'LEN:%s-%s' % lbin
 
 
-#class DictionaryIntersect(Indicator):
+# TODO: Make this way more efficient...?
+class DictionaryIntersect(Indicator):
   """
-  Return a feature
+  Return an indicator feature for whether the input nodeset intersects with any phrase in
+  the given dictionary
+  """
+  def __init__(self, ns, d_name, d, d_attrib='word', caseless=True):
+    self.ns = ns
+    self.d_name = d_name
+    self.d_attrib = d_attrib
+    self.caseless = caseless
+
+    # Split the dictionary up by phrase length (i.e. # of tokens)
+    self.dl = defaultdict(lambda : set())
+    for phrase in d:
+      if caseless:
+        phrase = phrase.lower()
+      self.dl[len(phrase.split())].add(phrase)
+    self.dl.update((k, frozenset(v)) for k,v in self.dl.iteritems())
+
+    # Get the ngram range for this dictionary
+    self.ng_range = range(max(1, min(self.dl.keys())), max(self.dl.keys())+1)
+
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
+    """
+    We replace the default apply method because we first need to get the full sequence,
+    match against ngrams of this, then math via cid_attrib against the input NodeSet
+    We do this because we need to catch e.g. when a multi-word phrase in the dictionary
+    only partially-overlaps with the NodeSet (this should count as a match!)
+    """
+    # First get full sequence
+    fs = map(lambda x : x.get(self.d_attrib), sorted(root.xpath("//*[@word_idx]"), key=lambda x : int(x.get('word_idx'))))
+
+    # Next do sequence n-gram matching
+    dcids = set()
+    for l in self.ng_range:
+      for i in range(0, len(fs)-l+1):
+        phrase = ' '.join(fs[i:i+l]).lower() if self.caseless else ' '.join(fs[i:i+l])
+        if phrase in self.dl[l]:
+          dcids.update(range(i, i+l))
+
+    # Finally, just look for intersect via XPATH + using the super method
+    # TODO: How to call parent method here!?
+    if len(dcids) > 0:
+      self.ns.xpath += '[' + " or ".join("@word_idx='%s'" % i for i in dcids) + ']'
+      m = [" or ".join("@%s='%s'" % (cid_attrib, c) for c in cid) for cid in cids] 
+      xpath = self.ns.xpath.format(*m)
+      if len(root.xpath(xpath)) > 0:
+        yield "DICTIONARY-MATCH:%s" % self.d_name
 
 
 # COMBINATOR:
@@ -353,12 +395,3 @@ class Compile:
   
   def __repr__(self):
     return '\n'.join(str(op) for op in self._iterops())
-   
-
-# TODO: CONFIG file...?
-
-# TODO: Think about doc-level features and how to implement this
-
-# TODO: Table features
-
-# TODO: Stopwords
