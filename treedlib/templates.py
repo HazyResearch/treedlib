@@ -308,7 +308,7 @@ class DictionaryIntersect(Indicator):
       m = [" or ".join("@%s='%s'" % (cid_attrib, c) for c in cid) for cid in cids] 
       xpath = self.ns.xpath.format(*m)
       if len(root.xpath(xpath)) > 0:
-        yield "DICTIONARY-MATCH:%s" % self.d_name
+        yield "DICTIONARY-MATCH:%s:%s" % (self.d_name, self.ns.label)
 
 
 # COMBINATOR:
