@@ -102,6 +102,18 @@ class Filter(NodeSet):
 # INDICATOR:
 # ===========
 
+def compile_dict_sub(dicts):
+  """
+  Takes in a list of tuples of form (DICT_LABEL, set_of_words)
+  And returns a single dictionary mapping from word -> DICT_LABEL, based on priority ordering
+  """
+  dict_sub = {}
+  for dict_label, words in dicts:
+    for word in words:
+      if word not in dict_sub:
+        dict_sub[word] = dict_label
+  return dict_sub
+
 class Indicator:
   """
   Indicator objects are functions f : 2^T -> {0,1}^F
@@ -113,7 +125,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True, dict_sub={}):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
@@ -149,6 +161,11 @@ class Indicator:
     except AttributeError:
       res = nodes
       label = '%s%s' % (inv, self.ns.label)
+    
+    # Check each result value against a dictionary which maps string -> DICT_NAME,
+    # and replace with the value "DICT_NAME"
+    if len(dict_sub) > 0:
+      res = [dict_sub.get(a, a) for a in res]
 
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
@@ -165,8 +182,8 @@ class Indicator:
     """
     return [' '.join(res)]
 
-  def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
-    for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label):
+  def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True, dict_sub={}):
+    for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label, dict_sub=dict_sub):
       print feat
 
   def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False):
