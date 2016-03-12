@@ -158,15 +158,17 @@ class Indicator:
       attribs = re.split(r'\s*,\s*', self.attribs)
       res = ['|'.join(str(node.get(a)) for a in attribs) for node in nodes]
       label = '%s%s:%s' % (inv, '|'.join(attribs).upper(), self.ns.label)
+
+      # Check each result value against a dictionary which maps string -> DICT_NAME,
+      # and replace with the value "DICT_NAME"
+      # NOTE: Only apply to word/lemma indicators for now
+      if len(attribs) == 1 and attribs[0] in ('word', 'lemma') and len(dict_sub) > 0:
+        res = [dict_sub.get(a, a) for a in res]
+
     except AttributeError:
       res = nodes
       label = '%s%s' % (inv, self.ns.label)
     
-    # Check each result value against a dictionary which maps string -> DICT_NAME,
-    # and replace with the value "DICT_NAME"
-    if len(dict_sub) > 0:
-      res = [dict_sub.get(a, a) for a in res]
-
     # Only yield if non-zero result set; process through _get_features fn
     if len(res) > 0:
       for feat in self._get_features(res):
@@ -341,18 +343,18 @@ class Combinator:
     self.ind1 = ind1
     self.ind2 = ind2
 
-  def apply(self, root, cids, cid_attrib='word_idx'):
-    return self.ind1.apply(root, cids, cid_attrib)
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
+    return self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub)
 
-  def print_apply(self, root, cids, cid_attrib='word_idx'):
-    return self.apply(root, cids, cid_attrib)
+  def print_apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
+    return self.apply(root, cids, cid_attrib, dict_sub=dict_sub)
   
 
 class Combinations(Combinator):
   """Generates all *pairs* of features"""
-  def apply(self, root, cids, cid_attrib='word_idx'):
-    for f1 in self.ind1.apply(root, cids, cid_attrib):
-      for f2 in self.ind2.apply(root, cids, cid_attrib):
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
+    for f1 in self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub):
+      for f2 in self.ind2.apply(root, cids, cid_attrib, dict_sub=dict_sub):
         yield '%s+%s' % (f1, f2)
 
 
@@ -382,17 +384,17 @@ class Compile:
       else:
           yield ops
 
-  def apply(self, root, cids, cid_attrib='word_idx'):
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
     # Ensure that root is parsed
     if type(root) == str:
       root = et.fromstring(root)
 
     # Apply the feature templates
     for op in self._iterops():
-      for f in op.apply(root, cids, cid_attrib):
+      for f in op.apply(root, cids, cid_attrib, dict_sub=dict_sub):
         yield f
   
-  def result_set(self, root, cids, cid_attrib='word_idx'):
+  def result_set(self, root, cids, cid_attrib='word_idx', dict_sub={}):
     """Takes the union of the result sets"""
     # Ensure that root is parsed
     if type(root) == str:
@@ -401,14 +403,14 @@ class Compile:
     # Apply the feature templates
     res = set()
     for op in self._iterops():
-      res.update(op.result_set(root, cids, cid_attrib))
+      res.update(op.result_set(root, cids, cid_attrib, dict_sub=dict_sub))
     return res
   
-  def apply_mention(self, root, mention_idxs):
-    return self.apply(root, [mention_idxs])
+  def apply_mention(self, root, mention_idxs, dict_sub={}):
+    return self.apply(root, [mention_idxs], dict_sub=dict_sub)
   
-  def apply_relation(self, root, mention1_idxs, mention2_idxs):
-    return self.apply(root, [mention1_idxs, mention2_idxs])
+  def apply_relation(self, root, mention1_idxs, mention2_idxs, dict_sub={}):
+    return self.apply(root, [mention1_idxs, mention2_idxs], dict_sub=dict_sub)
   
   def __repr__(self):
     return '\n'.join(str(op) for op in self._iterops())
