@@ -102,16 +102,27 @@ class Filter(NodeSet):
 # INDICATOR:
 # ===========
 
-def compile_dict_sub(dicts):
+def compile_dict_sub(brown_clusters_path=None, user_dicts=[]):
   """
   Takes in a list of tuples of form (DICT_LABEL, set_of_words)
+  AND/OR a file path to a tsv file list of (word, brown cluster id) lines
   And returns a single dictionary mapping from word -> DICT_LABEL, based on priority ordering
+  Assume user dicts take priority over brown clusters...
   """
   dict_sub = {}
-  for dict_label, words in dicts:
+
+  # User ditionaries
+  for dict_label, words in user_dicts:
     for word in words:
       if word not in dict_sub:
         dict_sub[word] = dict_label
+
+  # Brown clusters
+  if brown_clusters_path is not None:
+    with open(brown_clusters_path, 'rb') as f:
+      for line in f:
+        word, cluster_id = line.rstrip().split('\t')
+        dict_sub[word] = 'BC-%s' % cluster_id
   return dict_sub
 
 class Indicator:
