@@ -25,8 +25,8 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
   templates = [
 
     # The full dependency path between
-    [Indicator(btwn, a) for a in BASIC_ATTRIBS_REL],
-    Indicator(btwn, 'dep_label,lemma'),
+    #[Indicator(btwn, a) for a in BASIC_ATTRIBS_REL],
+    #Indicator(btwn, 'dep_label,lemma'),
 
     # The *first element on the* path to the root: ngram lemmas along it
     Ngrams(Parents(btwn, 3), 'lemma', (1,3)),
@@ -34,26 +34,26 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
     # The ngrams between
     #[Combinations(dl, Ngrams(btwn, a, (2,3))) for a in BASIC_ATTRIBS_REL],
     #Combinations(dl, Ngrams(btwn, 'dep_label,lemma', (2,3))),
-    [Ngrams(btwn, a, (2,3)) for a in BASIC_ATTRIBS_REL],
-    Ngrams(btwn, 'dep_label,lemma', (2,3)),
+    [Ngrams(btwn, a, (1,3)) for a in BASIC_ATTRIBS_REL],
+    Ngrams(btwn, 'dep_label,lemma', (1,3)),
 
     # The VBs and NNs between
     #[Combinations(dl, Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3))) for p in ['VB', 'NN']],
     [Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
 
     # The siblings of each mention
-    [LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-    [LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
-    [RightNgrams(RightSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-    [RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
+    #[LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
+    #[LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
+    #[RightNgrams(RightSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
+    #[RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
 
     # The ngrams on the *word sequence* between
-    Combinations(sl, Ngrams(SeqBetween(), 'lemma', (1,3))),
-    Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))),
+    #Combinations(sl, Ngrams(SeqBetween(), 'lemma', (1,3))),
+    #Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))),
 
     # The length bin features
-    sl,
-    dl
+    #sl,
+    #dl
   ]
 
   # Add dictionary features
