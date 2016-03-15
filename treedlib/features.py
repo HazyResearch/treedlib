@@ -29,31 +29,37 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
     #Indicator(btwn, 'dep_label,lemma'),
 
     # The *first element on the* path to the root: ngram lemmas along it
-    Ngrams(Parents(btwn, 3), 'lemma', (1,3)),
+    Ngrams(Parents(btwn, 1), 'lemma', (1,3)),
 
     # The ngrams between
     #[Combinations(dl, Ngrams(btwn, a, (2,3))) for a in BASIC_ATTRIBS_REL],
     #Combinations(dl, Ngrams(btwn, 'dep_label,lemma', (2,3))),
-    [Ngrams(btwn, a, (1,3)) for a in BASIC_ATTRIBS_REL],
+    Ngrams(btwn, 'lemma', (1,3)),
     Ngrams(btwn, 'dep_label,lemma', (1,3)),
 
     # The VBs and NNs between
     #[Combinations(dl, Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3))) for p in ['VB', 'NN']],
-    [Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
+    #[Ngrams(Filter(btwn, 'pos', p), 'lemma', (1,3)) for p in ['VB', 'NN']],
+    Ngrams(Filter(btwn, 'pos', 'VB'), 'lemma', (1,3)),
+
+    # The ngrams on the seq between
+    Ngrams(SeqBetween(), 'lemma', (1,3)),
 
     # The siblings of each mention
-    #[LeftNgrams(LeftSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-    #[LeftNgrams(LeftSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
-    #[RightNgrams(RightSiblings(m0), a) for a in BASIC_ATTRIBS_REL],
-    #[RightNgrams(RightSiblings(m1), a) for a in BASIC_ATTRIBS_REL],
+    LeftNgrams(LeftSiblings(m0), 'lemma'),
+    LeftNgrams(LeftSiblings(m1), 'lemma'),
+    RightNgrams(RightSiblings(m0), 'lemma'),
+    RightNgrams(RightSiblings(m1), 'lemma'),
+    
+    Combinations(Indicator(Parents(m0,1),'lemma'),Indicator(Parents(m1,1),'lemma')),
 
     # The ngrams on the *word sequence* between
     #Combinations(sl, Ngrams(SeqBetween(), 'lemma', (1,3))),
     #Combinations(sl, Ngrams(Filter(SeqBetween(), 'pos', 'VB'), 'lemma', (1,2))),
 
     # The length bin features
-    #sl,
-    #dl
+    sl,
+    dl
   ]
 
   # Add dictionary features

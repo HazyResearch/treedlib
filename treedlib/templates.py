@@ -33,7 +33,7 @@ class Mention(NodeSet):
 
 class LeftSiblings(NodeSet):
   """Gets preceding siblings"""
-  def __init__(self, ns, w=3):
+  def __init__(self, ns, w=1):
     self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'LEFT-OF-%s' % ns.label
     self.xpath = '%s[1]/preceding-sibling::*[position() <= %s]' % (ns.xpath, w)
@@ -41,7 +41,7 @@ class LeftSiblings(NodeSet):
 
 class RightSiblings(NodeSet):
   """Gets following siblings"""
-  def __init__(self, ns, w=3):
+  def __init__(self, ns, w=1):
     self.__dict__.update(ns.__dict__) # inherit child object's attributes
     self.label = 'RIGHT-OF-%s' % ns.label
     self.xpath = '%s[1]/following-sibling::*[position() <= %s]' % (ns.xpath, w)
@@ -136,7 +136,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True, dict_sub={}):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=False, dict_sub={}):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
