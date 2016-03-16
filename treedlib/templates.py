@@ -136,7 +136,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=False, dict_sub={}):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True, dict_sub={}):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
