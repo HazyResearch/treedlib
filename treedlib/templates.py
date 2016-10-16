@@ -157,7 +157,7 @@ class Indicator:
 
     # Filter stopwords
     if stopwords is not None and len(stopwords) > 0:
-      nodes = filter(lambda n : n.get('word') not in stopwords, nodes)
+      nodes = filter(lambda n : n.get('word') not in stopwords and n.get('lemma') not in stopwords, nodes)
 
     # Perform seq filter here
     if hasattr(self.ns, 'seq_attrib') and self.ns.seq_attrib is not None:
