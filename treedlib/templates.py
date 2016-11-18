@@ -72,7 +72,7 @@ class Between(NodeSet):
   def __init__(self, ns1, ns2):
     self.__dict__.update(ns1.__dict__) # inherit *FIRST* child object's attributes
     self.label = 'BETWEEN-%s-and-%s' % (ns1.label, ns2.label)
-    self.xpath = "{0}[1]/ancestor-or-self::*[count(. | {1}[1]/ancestor-or-self::*) = count({1}[1]/ancestor-or-self::*)][1]/descendant-or-self::*[(count(.{0}) = count({0})) or (count(.{1}) = count({1}))]".format(ns1.xpath, ns2.xpath)
+    self.xpath = "{0}[1]/ancestor-or-self::*[count(. | {1}[1]/ancestor-or-self::*) = count({1}[1]/ancestor-or-self::*)][1]/descendant-or-self::*[((count(.{0}) = count({0})) or (count(.{1}) = count({1})))]".format(ns1.xpath, ns2.xpath)
 
 
 class SeqBetween(NodeSet):
@@ -125,6 +125,7 @@ def compile_dict_sub(brown_clusters_path=None, user_dicts=[]):
         dict_sub[word] = 'BC-%s' % cluster_id
   return dict_sub
 
+
 class Indicator:
   """
   Indicator objects are functions f : 2^T -> {0,1}^F
@@ -136,7 +137,7 @@ class Indicator:
     self.ns = ns
     self.attribs = attribs
 
-  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True, dict_sub={}):
+  def apply(self, root, cids, cid_attrib='word_idx', feat_label=True, inv_tag=True, stopwords=None, dict_sub={}):
     """
     Apply the feature template to the xml tree provided
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
@@ -153,6 +154,10 @@ class Indicator:
 
     # Get nodes
     nodes = root.xpath(xpath)
+
+    # Filter stopwords
+    if stopwords is not None and len(stopwords) > 0:
+      nodes = filter(lambda n : n.get('word') not in stopwords and n.get('lemma') not in stopwords, nodes)
 
     # Perform seq filter here
     if hasattr(self.ns, 'seq_attrib') and self.ns.seq_attrib is not None:
@@ -195,14 +200,14 @@ class Indicator:
     """
     return [' '.join(res)]
 
-  def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True, dict_sub={}):
-    for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label, dict_sub=dict_sub):
+  def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True, dict_sub={}, stopwords=None):
+    for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label, dict_sub=dict_sub, stopwords=stopwords):
       print feat
 
-  def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False, dict_sub={}):
+  def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False, dict_sub={}, stopwords=None):
     """Get results as a set- mostly for use in DSR applications"""
     res = set()
-    for feat in self.apply(root, cids, cid_attrib=cid_attrib, feat_label=feat_label, dict_sub=dict_sub):
+    for feat in self.apply(root, cids, cid_attrib=cid_attrib, feat_label=feat_label, dict_sub=dict_sub, stopwords=stopwords):
       res.add(feat)
     return res
   
@@ -354,18 +359,18 @@ class Combinator:
     self.ind1 = ind1
     self.ind2 = ind2
 
-  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
-    return self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub)
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}, stopwords=None):
+    return self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords)
 
-  def print_apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
-    return self.apply(root, cids, cid_attrib, dict_sub=dict_sub)
+  def print_apply(self, root, cids, cid_attrib='word_idx', dict_sub={}, stopwords=None):
+    return self.apply(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords)
   
 
 class Combinations(Combinator):
   """Generates all *pairs* of features"""
-  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
-    for f1 in self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub):
-      for f2 in self.ind2.apply(root, cids, cid_attrib, dict_sub=dict_sub):
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}, stopwords=None):
+    for f1 in self.ind1.apply(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords):
+      for f2 in self.ind2.apply(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords):
         yield '%s+%s' % (f1, f2)
 
 
@@ -395,17 +400,17 @@ class Compile:
       else:
           yield ops
 
-  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}):
+  def apply(self, root, cids, cid_attrib='word_idx', dict_sub={}, stopwords=None):
     # Ensure that root is parsed
     if type(root) == str:
       root = et.fromstring(root)
 
     # Apply the feature templates
     for op in self._iterops():
-      for f in op.apply(root, cids, cid_attrib, dict_sub=dict_sub):
+      for f in op.apply(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords):
         yield f
   
-  def result_set(self, root, cids, cid_attrib='word_idx', dict_sub={}):
+  def result_set(self, root, cids, cid_attrib='word_idx', dict_sub={}, stopwords=None):
     """Takes the union of the result sets"""
     # Ensure that root is parsed
     if type(root) == str:
@@ -414,14 +419,14 @@ class Compile:
     # Apply the feature templates
     res = set()
     for op in self._iterops():
-      res.update(op.result_set(root, cids, cid_attrib, dict_sub=dict_sub))
+      res.update(op.result_set(root, cids, cid_attrib, dict_sub=dict_sub, stopwords=stopwords))
     return res
   
-  def apply_mention(self, root, mention_idxs, dict_sub={}):
-    return self.apply(root, [mention_idxs], dict_sub=dict_sub)
+  def apply_mention(self, root, mention_idxs, dict_sub={}, stopwords=None):
+    return self.apply(root, [mention_idxs], dict_sub=dict_sub, stopwords=stopwords)
   
-  def apply_relation(self, root, mention1_idxs, mention2_idxs, dict_sub={}):
-    return self.apply(root, [mention1_idxs, mention2_idxs], dict_sub=dict_sub)
+  def apply_relation(self, root, mention1_idxs, mention2_idxs, dict_sub={}, stopwords=None):
+    return self.apply(root, [mention1_idxs, mention2_idxs], dict_sub=dict_sub, stopwords=stopwords)
   
   def __repr__(self):
     return '\n'.join(str(op) for op in self._iterops())
