@@ -157,13 +157,13 @@ class Indicator:
 
     # Filter stopwords
     if stopwords is not None and len(stopwords) > 0:
-      nodes = filter(lambda n : n.get('word') not in stopwords and n.get('lemma') not in stopwords, nodes)
+      nodes = [n for n in nodes if n.get('word') not in stopwords and n.get('lemma') not in stopwords]
 
     # Perform seq filter here
     if hasattr(self.ns, 'seq_attrib') and self.ns.seq_attrib is not None:
       seqa = self.ns.seq_attrib
       b = (cids[0][-1], cids[-1][0]) if cids[0][-1] < cids[-1][0] else (cids[-1][-1], cids[0][0])
-      nodes = filter(lambda n : n.get(seqa) is not None and int(n.get(seqa)) > b[0] and int(n.get(seqa)) < b[1], nodes)
+      nodes = [n for n in nodes if n.get(seqa) is not None and int(n.get(seqa)) > b[0] and int(n.get(seqa)) < b[1]]
 
     # If sort specified, perform here
     if hasattr(self.ns, 'psort') and self.ns.psort is not None:
@@ -202,7 +202,7 @@ class Indicator:
 
   def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True, dict_sub={}, stopwords=None):
     for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label, dict_sub=dict_sub, stopwords=stopwords):
-      print feat
+      print(feat)
 
   def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False, dict_sub={}, stopwords=None):
     """Get results as a set- mostly for use in DSR applications"""
@@ -233,7 +233,7 @@ class Ngrams(Indicator):
     if type(self.ng) == int:
       r = [self.ng - 1]
     else:
-      r = range(self.ng[0] - 1, min(len(res), self.ng[1]))
+      r = list(range(self.ng[0] - 1, min(len(res), self.ng[1])))
     return chain.from_iterable([' '.join(res[s:s+l+1]) for s in range(len(res)-l)] for l in r)
 
 
@@ -313,10 +313,10 @@ class DictionaryIntersect(Indicator):
       if caseless:
         phrase = phrase.lower()
       self.dl[len(phrase.split())].add(phrase)
-    self.dl.update((k, frozenset(v)) for k,v in self.dl.iteritems())
+    self.dl.update((k, frozenset(v)) for k,v in self.dl.items())
 
     # Get the ngram range for this dictionary
-    self.ng_range = range(max(1, min(self.dl.keys())), max(self.dl.keys())+1)
+    self.ng_range = list(range(max(1, min(self.dl.keys())), max(self.dl.keys())+1))
 
   def apply(self, root, cids, cid_attrib='word_idx', feat_label=True):
     """
@@ -326,7 +326,7 @@ class DictionaryIntersect(Indicator):
     only partially-overlaps with the NodeSet (this should count as a match!)
     """
     # First get full sequence
-    fs = map(lambda x : x.get(self.d_attrib), sorted(root.xpath("//*[@word_idx]"), key=lambda x : int(x.get('word_idx'))))
+    fs = [x.get(self.d_attrib) for x in sorted(root.xpath("//*[@word_idx]"), key=lambda x : int(x.get('word_idx')))]
 
     # Next do sequence n-gram matching
     dcids = set()
@@ -334,7 +334,7 @@ class DictionaryIntersect(Indicator):
       for i in range(0, len(fs)-l+1):
         phrase = ' '.join(fs[i:i+l]).lower() if self.caseless else ' '.join(fs[i:i+l])
         if phrase in self.dl[l]:
-          dcids.update(range(i, i+l))
+          dcids.update(list(range(i, i+l)))
 
     # Finally, just look for intersect via XPATH + using the super method
     # TODO: How to call parent method here!?

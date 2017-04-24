@@ -36,7 +36,7 @@ class FeatureTemplate:
   def apply_and_print(self, root):
     """Helper function to apply and then print the features one per line"""
     for f in self.apply(root):
-      print f
+      print(f)
 
   def __repr__(self):
     return "<%s, XPaths='%s', subsets=%s>" % (self.label, self.xpaths, self.subsets)
@@ -139,7 +139,7 @@ class Between(FeatureTemplate):
           if 'dep_label' in xpath:
             yield res
           else:
-            yield filter(lambda n : (len(p1)==0 or n!=p1[-1]) and (len(p2)==0 or n!=p2[-1]), res)
+            yield [n for n in res if (len(p1)==0 or n!=p1[-1]) and (len(p2)==0 or n!=p2[-1])]
 
 
 # TODO: Only handles single-word keywords right now!!!
