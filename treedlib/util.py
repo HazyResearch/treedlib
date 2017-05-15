@@ -6,7 +6,7 @@ import sys
 def print_gen(gen):
   """Print the results of a generator one-per-line"""
   for e in gen:
-    print e
+    print(e)
 
 def print_error(err_string):
   """Function to write to stderr"""
@@ -54,7 +54,7 @@ def parse_ptsv_element(s, t, sep='|^|', sep2='|~|'):
 
 class Row:
   def __str__(self):
-    return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.iteritems()) + ')>'
+    return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.items()) + ')>'
 
   def __repr__(self):
     return str(self)
@@ -106,8 +106,8 @@ def print_tsv(out_record):
     if isinstance(x, list) or isinstance(x, tuple):
       cur_val = list_to_pg_array(x)
     elif x is None:
-      cur_val = '\N'
+      cur_val = '\\N'
     else:
       cur_val = x
     values.append(cur_val)
-  print '\t'.join(str(x) for x in values)
+  print('\t'.join(str(x) for x in values))

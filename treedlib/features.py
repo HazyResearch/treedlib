@@ -1,4 +1,4 @@
-from templates import *
+from .templates import *
 import lxml.etree as et
 
 def compile_relation_feature_generator(dictionaries=None, opts={}):
@@ -61,7 +61,7 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
 
   # Add dictionary features
   if dictionaries:
-    for d_name, d in dictionaries.iteritems():
+    for d_name, d in dictionaries.items():
       templates.append(DictionaryIntersect(btwn, d_name, d))
       templates.append(DictionaryIntersect(SeqBetween(), d_name, d))
 
