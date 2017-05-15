@@ -106,7 +106,7 @@ def print_tsv(out_record):
     if isinstance(x, list) or isinstance(x, tuple):
       cur_val = list_to_pg_array(x)
     elif x is None:
-      cur_val = '\N'
+      cur_val = r'\N'
     else:
       cur_val = x
     values.append(cur_val)
