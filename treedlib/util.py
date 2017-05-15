@@ -6,7 +6,7 @@ import sys
 def print_gen(gen):
   """Print the results of a generator one-per-line"""
   for e in gen:
-    print e
+    print(e)
 
 def print_error(err_string):
   """Function to write to stderr"""
@@ -110,4 +110,4 @@ def print_tsv(out_record):
     else:
       cur_val = x
     values.append(cur_val)
-  print '\t'.join(str(x) for x in values)
+  print('\t'.join(str(x) for x in values))

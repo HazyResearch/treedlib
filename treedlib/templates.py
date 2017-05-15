@@ -202,7 +202,7 @@ class Indicator:
 
   def print_apply(self, root, cids, cid_attrib='word_idx', feat_label=True, dict_sub={}, stopwords=None):
     for feat in self.apply(root, cids, cid_attrib, feat_label=feat_label, dict_sub=dict_sub, stopwords=stopwords):
-      print feat
+      print(feat)
 
   def result_set(self, root, cids, cid_attrib='word_idx', feat_label=False, dict_sub={}, stopwords=None):
     """Get results as a set- mostly for use in DSR applications"""
