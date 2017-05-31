@@ -36,7 +36,7 @@ class FeatureTemplate:
   def apply_and_print(self, root):
     """Helper function to apply and then print the features one per line"""
     for f in self.apply(root):
-      print f
+      print(f)
 
   def __repr__(self):
     return "<%s, XPaths='%s', subsets=%s>" % (self.label, self.xpaths, self.subsets)
