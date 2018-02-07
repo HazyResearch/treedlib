@@ -157,13 +157,13 @@ class Indicator:
 
     # Filter stopwords
     if stopwords is not None and len(stopwords) > 0:
-      nodes = filter(lambda n : n.get('word') not in stopwords and n.get('lemma') not in stopwords, nodes)
+      nodes = list(filter(lambda n : n.get('word') not in stopwords and n.get('lemma') not in stopwords, nodes))
 
     # Perform seq filter here
     if hasattr(self.ns, 'seq_attrib') and self.ns.seq_attrib is not None:
       seqa = self.ns.seq_attrib
       b = (cids[0][-1], cids[-1][0]) if cids[0][-1] < cids[-1][0] else (cids[-1][-1], cids[0][0])
-      nodes = filter(lambda n : n.get(seqa) is not None and int(n.get(seqa)) > b[0] and int(n.get(seqa)) < b[1], nodes)
+      nodes = list(filter(lambda n : n.get(seqa) is not None and int(n.get(seqa)) > b[0] and int(n.get(seqa)) < b[1], nodes))
 
     # If sort specified, perform here
     if hasattr(self.ns, 'psort') and self.ns.psort is not None:

@@ -1,4 +1,4 @@
-from templates import *
+from treedlib.templates import *
 import lxml.etree as et
 
 def compile_relation_feature_generator(dictionaries=None, opts={}):

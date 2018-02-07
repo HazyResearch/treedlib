@@ -4,7 +4,7 @@ import os
 os.environ["TREEDLIB_LIB"] = os.path.dirname(os.path.realpath(__file__))
 
 # Load treedlib libs
-from util import *
-from structs import *
-from templates import *
-from features import *
+from treedlib.util import *
+from treedlib.structs import *
+from treedlib.templates import *
+from treedlib.features import *
