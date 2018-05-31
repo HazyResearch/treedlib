@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='treedlib',
-    version='0.1.0',
+    version='0.1.1',
     description='Library of tree features.',
     packages=find_packages(),
     install_requires=[
