@@ -139,7 +139,7 @@ class Between(FeatureTemplate):
           if 'dep_label' in xpath:
             yield res
           else:
-            yield filter(lambda n : (len(p1)==0 or n!=p1[-1]) and (len(p2)==0 or n!=p2[-1]), res)
+            yield list(filter(lambda n : (len(p1)==0 or n!=p1[-1]) and (len(p2)==0 or n!=p2[-1]), res))
 
 
 # TODO: Only handles single-word keywords right now!!!

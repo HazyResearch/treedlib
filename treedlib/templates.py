@@ -143,7 +143,7 @@ class Indicator:
     A list of lists of candidate mention ids are passed in, as well as a cid_attrib
     These identify the candidate mentions refered to by index in Mention
     For example, cids=[[1,2]], cid_attrib='word_idx' will have mention 0 as the set of nodes
-    that have word inde 1 and 2
+    that have word index 1 and 2
     """
     # Sub in the candidate mention identifiers provided
     m = [" or ".join("@%s='%s'" % (cid_attrib, c) for c in cid) for cid in cids] 
@@ -313,7 +313,7 @@ class DictionaryIntersect(Indicator):
       if caseless:
         phrase = phrase.lower()
       self.dl[len(phrase.split())].add(phrase)
-    self.dl.update((k, frozenset(v)) for k,v in self.dl.iteritems())
+    self.dl.update((k, frozenset(v)) for k,v in self.dl.items())
 
     # Get the ngram range for this dictionary
     self.ng_range = range(max(1, min(self.dl.keys())), max(self.dl.keys())+1)
@@ -326,7 +326,7 @@ class DictionaryIntersect(Indicator):
     only partially-overlaps with the NodeSet (this should count as a match!)
     """
     # First get full sequence
-    fs = map(lambda x : x.get(self.d_attrib), sorted(root.xpath("//*[@word_idx]"), key=lambda x : int(x.get('word_idx'))))
+    fs = list(map(lambda x : x.get(self.d_attrib), sorted(root.xpath("//*[@word_idx]"), key=lambda x : int(x.get('word_idx')))))
 
     # Next do sequence n-gram matching
     dcids = set()

@@ -54,7 +54,7 @@ def parse_ptsv_element(s, t, sep='|^|', sep2='|~|'):
 
 class Row:
   def __str__(self):
-    return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.iteritems()) + ')>'
+    return '<Row(' + ', '.join("%s=%s" % x for x in self.__dict__.items()) + ')>'
 
   def __repr__(self):
     return str(self)
