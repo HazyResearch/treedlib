@@ -1,7 +1,7 @@
 from treedlib.templates import *
 import lxml.etree as et
 
-def compile_relation_feature_generator(dictionaries=None, opts={}):
+def compile_relation_feature_generator(dictionaries=None, opts={}, is_multary=False):
   """
   Given optional arguments, returns a generator function which accepts an xml root
   and two lists of mention indexes, and will generate relation features for this relation
@@ -9,6 +9,7 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
   Optional args are:
     * dictionaries: should be a dictionary of lists of phrases, where the key is the dict name
     * opts: see defaults above
+    * is_multary: whether to use multiple mentions or binary mentions
   """
   # TODO: put globals into opts
   #BASIC_ATTRIBS_REL = ['word', 'lemma', 'pos', 'ner', 'dep_label']
@@ -66,6 +67,8 @@ def compile_relation_feature_generator(dictionaries=None, opts={}):
       templates.append(DictionaryIntersect(SeqBetween(), d_name, d))
 
   # return generator function
+  if is_multary:
+    return Compile(templates).apply_multary_relation
   return Compile(templates).apply_relation
 
 """

@@ -428,5 +428,8 @@ class Compile:
   def apply_relation(self, root, mention1_idxs, mention2_idxs, dict_sub={}, stopwords=None):
     return self.apply(root, [mention1_idxs, mention2_idxs], dict_sub=dict_sub, stopwords=stopwords)
   
+  def apply_multary_relation(self, root, mentions, dict_sub={}, stopwords=None):
+    return self.apply(root, mentions, dict_sub=dict_sub, stopwords=stopwords)
+  
   def __repr__(self):
     return '\n'.join(str(op) for op in self._iterops())
